@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bayside Chapel — Spiritual Gifts & Calling Assessment</title>
+<meta name="description" content="Discover your spiritual gifts and discern your calling. A reflection tool from Bayside Chapel." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%230270DE'/%3E%3Cpath d='M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z' fill='none' stroke='%23fff' stroke-width='4.5'/%3E%3Cline x1='22' y1='16' x2='22' y2='48' stroke='%23fff' stroke-width='4.5'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "recharts": "https://esm.sh/recharts@2.13.0?deps=react@18.3.1,react-dom@18.3.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1"
+  }
+}
+</script>
+<script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
+<style>
+  html, body { background: #F6F8FB; margin: 0; padding: 0; }
+  #root { min-height: 100vh; }
+  /* Initial loader, hidden once React mounts */
+  .initial-loader {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #0270DE; gap: 1rem;
+    background: #F6F8FB;
+    z-index: 9999;
+    transition: opacity 400ms ease;
+  }
+  .initial-loader.hidden { opacity: 0; pointer-events: none; }
+  .initial-loader-mark {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #0270DE;
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .initial-loader-mark svg { width: 32px; height: 32px; }
+  .initial-loader-text { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #6B7280; font-weight: 600; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(2,112,222,0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(2,112,222,0); }
+  }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="initial-loader" id="initial-loader">
+    <div class="initial-loader-mark">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z" fill="none" stroke="#fff" stroke-width="4.5"/>
+        <line x1="22" y1="16" x2="22" y2="48" stroke="#fff" stroke-width="4.5"/>
+      </svg>
+    </div>
+    <div class="initial-loader-text">Bayside Chapel — Loading</div>
+  </div>
+</div>
+
+<script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
+} from 'recharts';
+import {
+  ChevronRight, ChevronLeft, Award, BookOpen, Printer, RotateCcw, Check,
+  Sparkles, Heart, Flame, MapPin, Clock, ArrowRight, Star, Download, Mail,
+  AlertCircle, Loader2,
+} from 'lucide-react';
+
+/* ===================================================================== */
+/*                                DATA                                   */
+/* ===================================================================== */
+
+const GIFTS = [
+  { id: 'administration', name: 'Administration', desc: 'The God-given ability to organize people, resources, and plans to accomplish ministry goals effectively and efficiently.', scripture: '1 Corinthians 12:28; Acts 6:1–7' },
+  { id: 'apostleship', name: 'Apostleship', desc: 'The God-given ability to launch new ministries, plant churches, or extend the gospel into new territories and cultures.', scripture: '1 Corinthians 12:28; Ephesians 4:11; Romans 1:5' },
+  { id: 'discernment', name: 'Discernment', desc: 'The God-given ability to distinguish between truth and error, to sense the spiritual source behind a message, behavior, or situation.', scripture: '1 Corinthians 12:10; 1 John 4:1; Acts 16:16–18' },
+  { id: 'encouragement', name: 'Encouragement', desc: 'The God-given ability to come alongside others with words of comfort, challenge, and hope that strengthen their faith and move them toward growth.', scripture: 'Romans 12:8; Acts 14:22; Hebrews 10:24–25' },
+  { id: 'evangelism', name: 'Evangelism', desc: 'The God-given ability to clearly and effectively communicate the gospel to unbelievers in a way that draws them to faith in Christ.', scripture: 'Ephesians 4:11; Acts 8:26–40; 2 Timothy 4:5' },
+  { id: 'faith', name: 'Faith', desc: 'The God-given ability to trust God with extraordinary confidence, even in the face of impossible circumstances, and to inspire that trust in others.', scripture: '1 Corinthians 12:9; Hebrews 11:1; Romans 4:18–21' },
+  { id: 'giving', name: 'Giving', desc: 'The God-given ability to contribute material resources to the work of the Lord with generosity, joy, and cheerfulness beyond what is expected.', scripture: 'Romans 12:8; 2 Corinthians 9:6–8; Acts 4:36–37' },
+  { id: 'healing', name: 'Healing', desc: 'The God-given ability to serve as an instrument of God’s healing power — physical, emotional, or spiritual — in the lives of others.', scripture: '1 Corinthians 12:9, 28; Acts 3:1–10; James 5:14–16' },
+  { id: 'helps', name: 'Helps / Service', desc: 'The God-given ability to identify and meet practical needs in the body of Christ, freeing others to focus on their primary calling.', scripture: 'Romans 12:7; 1 Corinthians 12:28; Acts 6:1–4' },
+  { id: 'hospitality', name: 'Hospitality', desc: 'The God-given ability to create warm, welcoming environments where people feel valued, safe, and cared for.', scripture: '1 Peter 4:9–10; Romans 12:13; Hebrews 13:2' },
+  { id: 'intercession', name: 'Intercession', desc: 'The God-given ability to pray for extended periods with intensity and faithfulness, and to see specific and significant answers to prayer.', scripture: 'Romans 8:26–27; Colossians 4:12; 1 Timothy 2:1–4' },
+  { id: 'knowledge', name: 'Knowledge', desc: 'The God-given ability to discover, analyze, and understand biblical truth in a way that edifies the body of Christ.', scripture: '1 Corinthians 12:8; Romans 11:33–34; Colossians 2:2–3' },
+  { id: 'leadership', name: 'Leadership', desc: 'The God-given ability to cast vision, set direction, and motivate others to work together toward a God-honoring purpose.', scripture: 'Romans 12:8; Hebrews 13:17; Acts 15:7–11' },
+  { id: 'mercy', name: 'Mercy', desc: 'The God-given ability to feel genuine empathy and compassion for those who are suffering and to translate that compassion into cheerful, tangible acts of care.', scripture: 'Romans 12:8; Matthew 25:34–40; Luke 10:30–37' },
+  { id: 'pastoring', name: 'Pastoring / Shepherding', desc: 'The God-given ability to assume long-term responsibility for the spiritual health, protection, and growth of a group of believers.', scripture: 'Ephesians 4:11; 1 Peter 5:1–4; John 10:11–14' },
+  { id: 'prophecy', name: 'Prophecy', desc: 'The God-given ability to receive and communicate a message from God that edifies, exhorts, or comforts the body of Christ.', scripture: 'Romans 12:6; 1 Corinthians 12:10, 14:1–5; Acts 2:17' },
+  { id: 'teaching', name: 'Teaching', desc: 'The God-given ability to understand and clearly explain the truths of God’s Word so that others can learn, grow, and apply Scripture to their lives.', scripture: 'Romans 12:7; 1 Corinthians 12:28; Ephesians 4:11; James 3:1' },
+  { id: 'wisdom', name: 'Wisdom', desc: 'The God-given ability to apply biblical truth and spiritual insight to specific situations in a way that produces the best course of action.', scripture: '1 Corinthians 12:8; James 1:5; Acts 6:3, 10' },
+];
+
+const QUESTIONS = [
+  // Administration (1-5)
+  'I enjoy organizing projects, events, or teams to accomplish a goal efficiently.',
+  'Others often look to me to create structure or bring order to a situation.',
+  'I am energized by planning details and making sure things run smoothly.',
+  'I can see how to coordinate people and resources to accomplish a task.',
+  'I am frustrated when things are disorganized or lack a clear plan.',
+  // Apostleship (6-10)
+  'I feel drawn to start new ministries, groups, or initiatives where none exist.',
+  'I am comfortable stepping into unfamiliar environments to share the gospel.',
+  'I sense a calling to reach people and places that are underserved or unreached.',
+  'Others have recognized a pioneering or entrepreneurial quality in my ministry.',
+  'I am willing to take significant risks for the sake of advancing God’s kingdom.',
+  // Discernment (11-15)
+  'I can often sense when something is spiritually wrong in a situation, even when others cannot.',
+  'I have an ability to distinguish between truth and error in teaching or behavior.',
+  'I am sensitive to the motives behind people’s words or actions.',
+  'I feel a strong responsibility to protect others from deception or false teaching.',
+  'I have experienced moments where the Holy Spirit revealed something hidden to me.',
+  // Encouragement (16-20)
+  'I am drawn to come alongside people who are struggling and help them take the next step.',
+  'Others have told me that my words gave them hope or strength during a difficult time.',
+  'I enjoy helping people see how Scripture applies to their specific situation.',
+  'I am motivated to challenge others to grow in their faith, even when it is uncomfortable.',
+  'I find it natural to see potential in people and call it out.',
+  // Evangelism (21-25)
+  'I feel a burden for people who do not know Jesus and look for opportunities to share the gospel.',
+  'I can explain the gospel clearly and naturally in everyday conversation.',
+  'I am comfortable building relationships with non-believers for the purpose of sharing Christ.',
+  'I have seen people come to faith through conversations or relationships I have been part of.',
+  'I am more energized by reaching the lost than by serving those already in the church.',
+  // Faith (26-30)
+  'I have an unusual confidence in God’s ability to do what seems impossible.',
+  'When others are discouraged, I find it natural to trust God and encourage them to do the same.',
+  'I am willing to step out in obedience even when the outcome is uncertain.',
+  'I have experienced God answering prayers that others considered unlikely.',
+  'I am not easily shaken by circumstances because I trust God’s sovereignty.',
+  // Giving (31-35)
+  'I experience deep joy when I give financially or materially to others or to ministry.',
+  'I am sensitive to financial needs and feel compelled to meet them when I can.',
+  'I give generously and often beyond what others might consider reasonable.',
+  'I prefer to give quietly without recognition or attention.',
+  'I view my financial resources as belonging to God and available for His purposes.',
+  // Healing (36-40)
+  'I have prayed for someone’s physical healing and seen God answer in a tangible way.',
+  'I feel a strong compassion for the sick and a desire to pray for their restoration.',
+  'I believe God still heals today and I am drawn to pray boldly for healing.',
+  'Others have sought me out to pray for physical, emotional, or spiritual healing.',
+  'I have witnessed or experienced supernatural healing that I cannot explain apart from God.',
+  // Helps/Service (41-45)
+  'I enjoy serving behind the scenes to support the work of others.',
+  'I notice practical needs and feel compelled to meet them without being asked.',
+  'I am more fulfilled by helping someone else succeed than by being in the spotlight.',
+  'I am willing to do tasks that others overlook or consider unimportant.',
+  'I find joy in freeing up leaders to focus on their calling by handling practical details.',
+  // Hospitality (46-50)
+  'I enjoy making people feel welcome, comfortable, and cared for in my home or at church.',
+  'I am drawn to newcomers, visitors, or people who seem out of place.',
+  'I find it natural to create warm, inviting environments for fellowship.',
+  'I look for opportunities to open my home or share a meal with others.',
+  'People have told me they feel safe, accepted, or at home around me.',
+  // Intercession (51-55)
+  'I spend extended time in prayer and find it energizing rather than draining.',
+  'I feel a deep burden to pray for specific people, situations, or needs.',
+  'Others frequently ask me to pray for them because they trust my prayer life.',
+  'I have experienced the Holy Spirit prompting me to pray for someone or something specific.',
+  'I believe prayer is the most important thing I can do for someone.',
+  // Knowledge (56-60)
+  'I enjoy studying Scripture deeply and discovering truths that are not immediately obvious.',
+  'I have experienced moments where God revealed an insight or understanding I had not studied.',
+  'I am drawn to research, study, and learning about God’s Word and theology.',
+  'Others come to me with questions about the Bible or doctrine.',
+  'I retain and recall biblical information easily and enjoy sharing it.',
+  // Leadership (61-65)
+  'I am able to cast vision and motivate others to work toward a shared goal.',
+  'Others naturally follow my lead, even when I have not been formally appointed.',
+  'I enjoy taking responsibility for guiding a group or team toward a purpose.',
+  'I can make decisions under pressure and help others stay focused.',
+  'I feel a sense of accountability for the spiritual growth and direction of those I lead.',
+  // Mercy (66-70)
+  'I am deeply moved by the pain, suffering, or struggles of others.',
+  'I am drawn to people who are hurting, marginalized, or overlooked.',
+  'I find it natural to show compassion through presence, listening, and practical care.',
+  'I am more concerned with comforting someone than correcting them.',
+  'Others have described me as empathetic, tender-hearted, or compassionate.',
+  // Pastoring (71-75)
+  'I feel a deep responsibility for the spiritual well-being of a group of people.',
+  'I enjoy walking with people through seasons of growth, struggle, and transformation.',
+  'I am drawn to long-term, relational investment in others rather than short-term projects.',
+  'I am protective of those in my care and alert to influences that could harm them.',
+  'I find fulfillment in nurturing, guiding, and discipling others over time.',
+  // Prophecy (76-80)
+  'I feel compelled to speak God’s truth even when it is unpopular or uncomfortable.',
+  'I have a strong sense of right and wrong and am grieved by sin and injustice.',
+  'Others have told me that something I said felt like it came directly from God.',
+  'I am more concerned with faithfulness to God’s Word than with people’s approval.',
+  'I sense the Holy Spirit giving me specific words or messages for individuals or groups.',
+  // Teaching (81-85)
+  'I enjoy explaining Scripture in a way that helps others understand and apply it.',
+  'I spend significant time preparing to teach and want to be accurate and clear.',
+  'Others have told me they learned something meaningful from my teaching.',
+  'I am frustrated by shallow or inaccurate handling of God’s Word.',
+  'I am energized when I see someone grasp a biblical truth for the first time.',
+  // Wisdom (86-90)
+  'People seek my advice when facing difficult decisions or complex situations.',
+  'I am able to see the bigger picture and offer perspective that others miss.',
+  'I can apply biblical principles to real-life situations in practical ways.',
+  'I often sense the right course of action before all the facts are available.',
+  'I value discernment and thoughtful decision-making over quick reactions.',
+];
+
+const SCALE = [
+  { value: 0, short: 'Not at all', full: 'Not at all true of me' },
+  { value: 1, short: 'Rarely', full: 'Rarely true of me' },
+  { value: 2, short: 'Sometimes', full: 'Sometimes true of me' },
+  { value: 3, short: 'Often', full: 'Often true of me' },
+  { value: 4, short: 'Definitely', full: 'Consistently & definitely true' },
+];
+
+const CALLING_QUESTIONS = [
+  { key: 'passion', title: 'Passion', icon: Heart, prompt: 'What issues, causes, or groups of people stir your heart the most?', hint: 'e.g., youth, the elderly, addiction recovery, justice, discipleship, the unreached' },
+  { key: 'burden', title: 'Burden', icon: Flame, prompt: 'What breaks your heart? When you look at the world, the church, or your community, what makes you say, “Someone needs to do something about that”?' },
+  { key: 'experience', title: 'Experience', icon: MapPin, prompt: 'What significant life experiences — including suffering, career, education, or personal struggles — has God used to shape who you are today?' },
+  { key: 'fruit', title: 'Fruit', icon: Star, prompt: 'Where have you seen the most fruit in your service to others? What kinds of ministry or service have people affirmed in your life?' },
+  { key: 'joy', title: 'Joy', icon: Sparkles, prompt: 'When do you feel most alive and most aligned with God’s purpose? What kind of service or ministry energizes you rather than drains you?' },
+  { key: 'availability', title: 'Availability', icon: Clock, prompt: 'What season of life are you in right now, and what capacity do you realistically have to serve? (Be honest — stewardship of your time matters.)' },
+  { key: 'nextStep', title: 'Next Step', icon: ArrowRight, prompt: 'If you could do one thing for God’s kingdom in the next 6 months — without fear of failure — what would it be?' },
+];
+
+const QUESTIONS_PER_PAGE = 10;
+const TOTAL_PAGES = Math.ceil(QUESTIONS.length / QUESTIONS_PER_PAGE);
+
+const EMPTY_CALLING = {
+  passion: '', burden: '', experience: '', fruit: '',
+  joy: '', availability: '', nextStep: '',
+};
+
+/* ===================================================================== */
+/*                          BAYSIDE B LOGO MARK                          */
+/* ===================================================================== */
+
+function BaysideMark({ size = 32, className = '', fill = '#0270DE' }) {
+  // Stylized B-in-circle, matching Bayside Chapel brand mark
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-label="Bayside Chapel"
+    >
+      <circle cx="32" cy="32" r="32" fill={fill} />
+      <path
+        d="M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="4.5"
+        strokeLinejoin="miter"
+        strokeLinecap="square"
+      />
+      <line x1="22" y1="16" x2="22" y2="48" stroke="#fff" strokeWidth="4.5" strokeLinecap="square" />
+    </svg>
+  );
+}
+
+/* ===================================================================== */
+/*                                APP                                    */
+/* ===================================================================== */
+
+function SpiritualGiftsApp() {
+  const [step, setStep] = useState('welcome');
+  const [userName, setUserName] = useState('');
+  const [inventoryPage, setInventoryPage] = useState(0);
+  const [answers, setAnswers] = useState(Array(QUESTIONS.length).fill(null));
+  const [callingAnswers, setCallingAnswers] = useState(EMPTY_CALLING);
+  const [loaded, setLoaded] = useState(false);
+  const [hasSavedData, setHasSavedData] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const [saveState, setSaveState] = useState('idle');
+  const [showUnansweredWarning, setShowUnansweredWarning] = useState(false);
+  const topRef = useRef(null);
+
+  // --- Load saved progress (browser localStorage)
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('bayside-sga-progress') : null;
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && Array.isArray(data.answers)) {
+          setHasSavedData(true);
+          setSavedAt(data.savedAt);
+        }
+      }
+    } catch (e) { /* none */ }
+    setLoaded(true);
+  }, []);
+
+  // --- Auto-save (browser localStorage)
+  useEffect(() => {
+    if (!loaded || step === 'welcome') return;
+    const id = setTimeout(() => {
+      try {
+        if (typeof window === 'undefined') return;
+        setSaveState('saving');
+        window.localStorage.setItem('bayside-sga-progress', JSON.stringify({
+          step, userName, inventoryPage, answers, callingAnswers,
+          savedAt: new Date().toISOString(),
+        }));
+        setSaveState('saved');
+        setTimeout(() => setSaveState('idle'), 1400);
+      } catch (e) { setSaveState('idle'); }
+    }, 500);
+    return () => clearTimeout(id);
+  }, [step, userName, inventoryPage, answers, callingAnswers, loaded]);
+
+  // --- Computed scores
+  const scores = useMemo(() => GIFTS.map((g, i) => {
+    const slice = answers.slice(i * 5, i * 5 + 5);
+    const total = slice.reduce((s, v) => s + (v ?? 0), 0);
+    return { ...g, score: total };
+  }), [answers]);
+
+  const sortedScores = useMemo(
+    () => [...scores].sort((a, b) => b.score - a.score),
+    [scores]
+  );
+  const topThree = sortedScores.slice(0, 3);
+  const thirdScore = topThree[2]?.score ?? 0;
+  const secondary = sortedScores.filter(s => s.score >= 10 && !topThree.find(t => t.id === s.id));
+
+  const totalAnswered = answers.filter(a => a !== null).length;
+  const pageAnswered = answers
+    .slice(inventoryPage * QUESTIONS_PER_PAGE, (inventoryPage + 1) * QUESTIONS_PER_PAGE)
+    .filter(a => a !== null).length;
+  const allAnswered = totalAnswered === QUESTIONS.length;
+
+  function scrollTop() {
+    if (topRef.current) topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleResume() {
+    try {
+      const raw = window.localStorage.getItem('bayside-sga-progress');
+      if (raw) {
+        const data = JSON.parse(raw);
+        setStep(data.step || 'inventory');
+        setUserName(data.userName || '');
+        setInventoryPage(data.inventoryPage || 0);
+        setAnswers(data.answers || Array(QUESTIONS.length).fill(null));
+        setCallingAnswers({ ...EMPTY_CALLING, ...(data.callingAnswers || {}) });
+      }
+    } catch (e) { setStep('name'); }
+    setTimeout(scrollTop, 50);
+  }
+
+  function handleStartFresh() {
+    try { window.localStorage.removeItem('bayside-sga-progress'); } catch (e) {}
+    setUserName('');
+    setInventoryPage(0);
+    setAnswers(Array(QUESTIONS.length).fill(null));
+    setCallingAnswers(EMPTY_CALLING);
+    setHasSavedData(false);
+    setStep('name');
+    setTimeout(scrollTop, 50);
+  }
+
+  function setAnswer(idx, val) {
+    setAnswers(prev => {
+      const next = [...prev];
+      next[idx] = val;
+      return next;
+    });
+  }
+
+  function nextPage() {
+    if (inventoryPage < TOTAL_PAGES - 1) {
+      setInventoryPage(p => p + 1);
+      setTimeout(scrollTop, 50);
+    } else {
+      if (!allAnswered) {
+        setShowUnansweredWarning(true);
+        return;
+      }
+      setStep('calling');
+      setTimeout(scrollTop, 50);
+    }
+  }
+
+  function prevPage() {
+    if (inventoryPage > 0) {
+      setInventoryPage(p => p - 1);
+      setTimeout(scrollTop, 50);
+    } else {
+      setStep('name');
+      setTimeout(scrollTop, 50);
+    }
+  }
+
+  function jumpToFirstUnanswered() {
+    const firstUnanswered = answers.findIndex(a => a === null);
+    if (firstUnanswered === -1) return;
+    const page = Math.floor(firstUnanswered / QUESTIONS_PER_PAGE);
+    setInventoryPage(page);
+    setShowUnansweredWarning(false);
+    setTimeout(scrollTop, 50);
+  }
+
+  /* ------------------------------ RENDER ----------------------------- */
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+        :root {
+          --bayside-blue: #0270DE;
+          --bayside-blue-dark: #0058B0;
+          --bayside-cyan: #48D8DB;
+          --bayside-cyan-soft: #C8F1F3;
+          --bayside-magenta: #BA3175;
+          --bayside-orange: #F1592A;
+          --ink: #0A0A0A;
+          --ink-soft: #3A3A3A;
+          --ink-muted: #6B7280;
+          --paper: #FFFFFF;
+          --paper-soft: #F6F8FB;
+          --line: #E5E7EB;
+        }
+
+        .bs-body {
+          font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+          background: var(--paper-soft);
+          color: var(--ink);
+        }
+        .font-display {
+          font-family: 'Poppins', system-ui, sans-serif;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+        }
+        .font-serif {
+          font-family: 'Playfair Display', Georgia, serif;
+        }
+        .uppercase-tight {
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .uppercase-wide {
+          text-transform: uppercase;
+          letter-spacing: 0.18em;
+        }
+
+        .bs-card {
+          background: var(--paper);
+          border-radius: 14px;
+          box-shadow:
+            0 1px 2px rgba(10,10,10,0.04),
+            0 8px 24px -12px rgba(2,112,222,0.10);
+        }
+        .bs-card-dark {
+          background: var(--ink);
+          color: var(--paper);
+          border-radius: 14px;
+          box-shadow: 0 20px 60px -20px rgba(0,0,0,0.4);
+        }
+
+        .bs-btn-primary {
+          background: var(--bayside-blue);
+          color: white;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          transition: all 180ms cubic-bezier(.2,.8,.2,1);
+        }
+        .bs-btn-primary:hover {
+          background: var(--bayside-blue-dark);
+          transform: translateY(-1px);
+          box-shadow: 0 10px 24px -10px rgba(2,112,222,0.5);
+        }
+        .bs-btn-secondary {
+          background: white;
+          color: var(--ink);
+          border: 1.5px solid var(--ink);
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          transition: all 180ms cubic-bezier(.2,.8,.2,1);
+        }
+        .bs-btn-secondary:hover {
+          background: var(--ink);
+          color: white;
+        }
+        .bs-btn-ghost {
+          color: var(--ink-soft);
+          transition: color 180ms;
+        }
+        .bs-btn-ghost:hover { color: var(--bayside-blue); }
+
+        .bs-scale-btn {
+          background: var(--paper-soft);
+          color: var(--ink-soft);
+          font-family: 'Poppins', sans-serif;
+          font-weight: 700;
+          transition: all 160ms cubic-bezier(.2,.8,.2,1);
+          border: 1.5px solid transparent;
+        }
+        .bs-scale-btn:hover {
+          background: var(--bayside-cyan-soft);
+          color: var(--bayside-blue-dark);
+        }
+        .bs-scale-btn.active {
+          background: var(--bayside-blue);
+          color: white;
+          box-shadow: 0 6px 18px -6px rgba(2,112,222,0.55);
+          transform: translateY(-1px);
+        }
+
+        .bs-textarea {
+          background: var(--paper);
+          border: 1.5px solid var(--line);
+          font-family: 'Poppins', sans-serif;
+          transition: border-color 180ms, box-shadow 180ms;
+        }
+        .bs-textarea:focus {
+          outline: none;
+          border-color: var(--bayside-blue);
+          box-shadow: 0 0 0 4px rgba(2,112,222,0.12);
+        }
+        .bs-input {
+          background: var(--paper);
+          border: 1.5px solid var(--line);
+          font-family: 'Poppins', sans-serif;
+          transition: border-color 180ms, box-shadow 180ms;
+        }
+        .bs-input:focus {
+          outline: none;
+          border-color: var(--bayside-blue);
+          box-shadow: 0 0 0 4px rgba(2,112,222,0.12);
+        }
+
+        @keyframes bs-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .bs-fade-up { animation: bs-fade-up 500ms cubic-bezier(.2,.8,.2,1) both; }
+
+        @keyframes bs-stamp { 0% { opacity: 0; transform: scale(0.85); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+        .bs-stamp { animation: bs-stamp 600ms cubic-bezier(.2,.8,.2,1) both; }
+
+        .recharts-cartesian-axis-tick text {
+          font-family: 'Poppins', sans-serif !important;
+          font-size: 12px !important;
+          fill: #0A0A0A !important;
+          font-weight: 500 !important;
+        }
+
+        /* Hero spotlight effect */
+        .bs-hero-spotlight {
+          background:
+            radial-gradient(ellipse at 50% 0%, rgba(72,216,219,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 100%, rgba(2,112,222,0.20) 0%, transparent 50%),
+            #0A0A0A;
+        }
+
+        @media print {
+          .no-print { display: none !important; }
+          .bs-body { background: white !important; }
+          .bs-card, .bs-card-dark { box-shadow: none !important; border: 1px solid #ddd !important; }
+          .bs-card-dark { background: white !important; color: black !important; }
+          .page-break { page-break-before: always; }
+        }
+      `}</style>
+
+      <div ref={topRef} className="bs-body min-h-screen selection:bg-[var(--bayside-blue)] selection:text-white">
+        {/* Save indicator */}
+        {step !== 'welcome' && (
+          <div className="no-print fixed top-3 right-3 z-50 text-[11px] font-medium">
+            {saveState === 'saving' && (
+              <span className="inline-flex items-center gap-1.5 bg-white border border-[var(--line)] px-2.5 py-1.5 rounded-full text-[var(--ink-muted)] shadow-sm">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+              </span>
+            )}
+            {saveState === 'saved' && (
+              <span className="inline-flex items-center gap-1.5 bg-[var(--bayside-cyan-soft)] px-2.5 py-1.5 rounded-full text-[var(--bayside-blue-dark)] shadow-sm">
+                <Check className="w-3 h-3" /> Saved
+              </span>
+            )}
+          </div>
+        )}
+
+        {step === 'welcome' && (
+          <WelcomeScreen
+            hasSavedData={hasSavedData}
+            savedAt={savedAt}
+            loaded={loaded}
+            onResume={handleResume}
+            onStartFresh={handleStartFresh}
+          />
+        )}
+
+        {step === 'name' && (
+          <NameScreen
+            userName={userName}
+            setUserName={setUserName}
+            onBack={() => { setStep('welcome'); setTimeout(scrollTop, 50); }}
+            onNext={() => { setStep('inventory'); setTimeout(scrollTop, 50); }}
+          />
+        )}
+
+        {step === 'inventory' && (
+          <InventoryScreen
+            page={inventoryPage}
+            answers={answers}
+            setAnswer={setAnswer}
+            onPrev={prevPage}
+            onNext={nextPage}
+            totalAnswered={totalAnswered}
+            pageAnswered={pageAnswered}
+            showUnansweredWarning={showUnansweredWarning}
+            onJumpToUnanswered={jumpToFirstUnanswered}
+            onContinueAnyway={() => { setStep('calling'); setShowUnansweredWarning(false); setTimeout(scrollTop, 50); }}
+            onDismissWarning={() => setShowUnansweredWarning(false)}
+          />
+        )}
+
+        {step === 'calling' && (
+          <CallingScreen
+            callingAnswers={callingAnswers}
+            setCallingAnswers={setCallingAnswers}
+            onBack={() => { setStep('inventory'); setInventoryPage(TOTAL_PAGES - 1); setTimeout(scrollTop, 50); }}
+            onNext={() => { setStep('results'); setTimeout(scrollTop, 50); }}
+          />
+        )}
+
+        {step === 'results' && (
+          <ResultsScreen
+            userName={userName}
+            scores={scores}
+            sortedScores={sortedScores}
+            topThree={topThree}
+            thirdScore={thirdScore}
+            secondary={secondary}
+            callingAnswers={callingAnswers}
+            onRestart={handleStartFresh}
+            onEditInventory={() => { setStep('inventory'); setInventoryPage(0); setTimeout(scrollTop, 50); }}
+            onEditCalling={() => { setStep('calling'); setTimeout(scrollTop, 50); }}
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ===================================================================== */
+/*                            SUB-COMPONENTS                             */
+/* ===================================================================== */
+
+function BrandHeader({ dark = false }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <BaysideMark size={32} fill={dark ? '#FFFFFF' : '#0270DE'} />
+      <div className={`uppercase-wide text-[11px] font-semibold ${dark ? 'text-white/90' : 'text-[var(--ink)]'}`}>
+        Bayside<span className="font-normal opacity-70">chapel</span>
+      </div>
+    </div>
+  );
+}
+
+function WelcomeScreen({ hasSavedData, savedAt, loaded, onResume, onStartFresh }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Dark hero */}
+      <div className="bs-hero-spotlight text-white px-5 sm:px-8 pt-8 pb-16 sm:pt-10 sm:pb-24">
+        <div className="max-w-3xl mx-auto">
+          <BrandHeader dark />
+        </div>
+        <div className="max-w-3xl mx-auto mt-12 sm:mt-20 bs-fade-up">
+          <div className="uppercase-wide text-[11px] text-[var(--bayside-cyan)] font-semibold mb-5">
+            Spiritual Gifts & Calling Assessment
+          </div>
+          <h1 className="font-display text-5xl sm:text-7xl md:text-8xl leading-[0.92] mb-6">
+            DISCOVER<br/>YOUR <span className="text-[var(--bayside-cyan)]">GIFTS.</span>
+          </h1>
+          <p className="font-serif italic text-xl sm:text-2xl text-white/80 max-w-xl leading-snug">
+            Discern your calling. Take your next step.
+          </p>
+        </div>
+      </div>
+
+      {/* Light content */}
+      <div className="bg-[var(--paper-soft)] px-5 sm:px-8 py-12 sm:py-16 flex-1">
+        <div className="max-w-3xl mx-auto">
+          <div className="bs-card p-6 sm:p-8 mb-8 sm:mb-10 -mt-24 sm:-mt-32 relative bs-fade-up">
+            <div className="font-serif italic text-lg sm:text-xl text-[var(--ink-soft)] leading-relaxed mb-3">
+              “As each has received a gift, use it to serve one another, as good stewards of God’s varied grace.”
+            </div>
+            <div className="uppercase-wide text-[10px] font-semibold text-[var(--bayside-blue)]">
+              — 1 Peter 4:10
+            </div>
+          </div>
+
+          <p className="text-[var(--ink-soft)] leading-relaxed mb-10 max-w-2xl">
+            This is not a test — there are no wrong answers. It is a tool for reflection, prayer, and
+            conversation. The goal is not simply to label your gifts, but to help you take the next
+            step toward using them for God’s glory and the building up of His church.
+          </p>
+
+          <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-10">
+            <StepCard num="01" title="Gifts Inventory" desc="90 statements rated 0–4." accent="blue" />
+            <StepCard num="02" title="Calling Profile" desc="7 reflection questions." accent="cyan" />
+            <StepCard num="03" title="Your Results" desc="Charts, gifts, next steps." accent="blue" />
+          </div>
+
+          {loaded && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              {hasSavedData && (
+                <button
+                  onClick={onResume}
+                  className="bs-btn-primary inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg text-sm flex-1 sm:flex-initial"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Resume Assessment
+                </button>
+              )}
+              <button
+                onClick={onStartFresh}
+                className={`inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg text-sm flex-1 sm:flex-initial ${
+                  hasSavedData ? 'bs-btn-secondary' : 'bs-btn-primary'
+                }`}
+              >
+                {hasSavedData ? 'Start New' : 'Begin Assessment'}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          {hasSavedData && savedAt && (
+            <p className="text-xs text-[var(--ink-muted)] mt-3">
+              Last saved: {new Date(savedAt).toLocaleString()}
+            </p>
+          )}
+
+          <div className="mt-12 pt-8 border-t border-[var(--line)]">
+            <p className="text-sm text-[var(--ink-muted)] italic max-w-xl">
+              Pray before you begin. Answer honestly — not based on what you wish were true, but on
+              what is actually true of your life right now. <span className="font-semibold text-[var(--ink-soft)] not-italic">Every gift matters.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepCard({ num, title, desc, accent }) {
+  const accentColor = accent === 'cyan' ? 'var(--bayside-cyan)' : 'var(--bayside-blue)';
+  return (
+    <div className="bs-card p-5">
+      <div className="font-display text-3xl mb-1" style={{ color: accentColor }}>{num}</div>
+      <div className="uppercase-tight font-bold text-sm mb-1">{title}</div>
+      <div className="text-xs text-[var(--ink-muted)]">{desc}</div>
+    </div>
+  );
+}
+
+function NameScreen({ userName, setUserName, onBack, onNext }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="px-5 sm:px-8 pt-6">
+        <div className="max-w-2xl mx-auto"><BrandHeader /></div>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-5 sm:px-8 py-12">
+        <div className="max-w-xl w-full bs-fade-up">
+          <button onClick={onBack} className="bs-btn-ghost inline-flex items-center gap-1 text-sm mb-8">
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          <div className="uppercase-wide text-[11px] text-[var(--bayside-blue)] font-semibold mb-4">
+            Before we begin
+          </div>
+          <h2 className="font-display text-4xl sm:text-6xl leading-[0.95] mb-4">
+            WHAT’S YOUR<br/>NAME?
+          </h2>
+          <p className="text-[var(--ink-soft)] mb-8 leading-relaxed">
+            We’ll use it to personalize your results. Optional — feel free to skip.
+          </p>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="Your name"
+            className="bs-input w-full px-5 py-4 rounded-lg text-lg mb-5"
+            autoFocus
+          />
+          <button
+            onClick={onNext}
+            className="bs-btn-primary w-full inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg text-sm"
+          >
+            Begin Part I — Inventory <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InventoryScreen({
+  page, answers, setAnswer, onPrev, onNext,
+  totalAnswered, pageAnswered, showUnansweredWarning,
+  onJumpToUnanswered, onContinueAnyway, onDismissWarning,
+}) {
+  const startIdx = page * QUESTIONS_PER_PAGE;
+  const endIdx = Math.min(startIdx + QUESTIONS_PER_PAGE, QUESTIONS.length);
+  const pageQuestions = [];
+  for (let i = startIdx; i < endIdx; i++) {
+    pageQuestions.push({ idx: i, text: QUESTIONS[i] });
+  }
+  const overallPct = (totalAnswered / QUESTIONS.length) * 100;
+  const isLastPage = page === TOTAL_PAGES - 1;
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="mb-6"><BrandHeader /></div>
+
+      <div className="mb-8 bs-fade-up">
+        <div className="flex items-baseline justify-between mb-3">
+          <div className="uppercase-wide text-[11px] text-[var(--bayside-blue)] font-semibold">
+            Part I · Gifts Inventory
+          </div>
+          <div className="text-xs text-[var(--ink-muted)] tabular-nums font-medium">
+            Section {page + 1} / {TOTAL_PAGES}
+          </div>
+        </div>
+        <h2 className="font-display text-3xl sm:text-5xl leading-[0.95] mb-5">
+          RATE EACH STATEMENT<br/>
+          <span className="text-[var(--bayside-blue)]">HONESTLY.</span>
+        </h2>
+        <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)] font-medium">
+          <div className="flex-1 h-2 bg-[var(--line)] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${overallPct}%`,
+                background: `linear-gradient(90deg, var(--bayside-blue), var(--bayside-cyan))`,
+              }}
+            />
+          </div>
+          <span className="tabular-nums whitespace-nowrap">{totalAnswered} / {QUESTIONS.length}</span>
+        </div>
+      </div>
+
+      {/* Scale legend */}
+      <div className="bs-card p-4 mb-6">
+        <div className="uppercase-wide text-[10px] text-[var(--ink-muted)] font-semibold mb-2">Scale</div>
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[var(--ink-soft)]">
+          {SCALE.map(s => (
+            <div key={s.value} className="text-center">
+              <div className="font-display text-xl text-[var(--bayside-blue)] leading-none mb-1">{s.value}</div>
+              <div>{s.short}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div className="space-y-3 mb-8">
+        {pageQuestions.map(({ idx, text }) => {
+          const value = answers[idx];
+          return (
+            <div
+              key={idx}
+              className={`bs-card p-4 sm:p-5 border-l-[4px] transition-colors ${
+                value !== null ? 'border-[var(--bayside-blue)]' : 'border-transparent'
+              }`}
+            >
+              <div className="flex gap-3 mb-3">
+                <span className="font-display text-[var(--bayside-blue)] text-base leading-none pt-1 tabular-nums shrink-0">
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
+                <p className="text-[var(--ink)] leading-snug">{text}</p>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                {SCALE.map(s => {
+                  const active = value === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => setAnswer(idx, s.value)}
+                      className={`bs-scale-btn rounded-lg py-2.5 px-1 text-xl tabular-nums ${active ? 'active' : ''}`}
+                      aria-label={`${s.value} — ${s.full}`}
+                      title={s.full}
+                    >
+                      {s.value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Warning */}
+      {showUnansweredWarning && (
+        <div className="mb-6 bs-card p-5 border-l-[4px] border-[var(--bayside-orange)] bs-fade-up">
+          <div className="flex items-start gap-3 mb-3">
+            <AlertCircle className="w-5 h-5 text-[var(--bayside-orange)] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold mb-1">
+                {QUESTIONS.length - totalAnswered} unanswered question{QUESTIONS.length - totalAnswered === 1 ? '' : 's'}
+              </p>
+              <p className="text-sm text-[var(--ink-soft)]">
+                For the most accurate results, we recommend answering all 90 statements first.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onJumpToUnanswered} className="bs-btn-primary text-xs px-4 py-2 rounded-md">
+              Jump to First
+            </button>
+            <button onClick={onContinueAnyway} className="bs-btn-secondary text-xs px-4 py-2 rounded-md">
+              Continue Anyway
+            </button>
+            <button onClick={onDismissWarning} className="bs-btn-ghost text-xs px-4 py-2">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
+      <div className="flex items-center justify-between gap-3">
+        <button onClick={onPrev} className="bs-btn-ghost inline-flex items-center gap-1.5 px-4 py-3 text-sm font-semibold uppercase-tight">
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+        <div className="text-xs text-[var(--ink-muted)] hidden sm:block tabular-nums font-medium">
+          {pageAnswered} / {pageQuestions.length} on this page
+        </div>
+        <button onClick={onNext} className="bs-btn-primary inline-flex items-center gap-1.5 px-5 sm:px-7 py-3 rounded-lg text-sm">
+          {isLastPage ? 'Continue to Part II' : 'Next Section'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CallingScreen({ callingAnswers, setCallingAnswers, onBack, onNext }) {
+  function update(key, val) {
+    setCallingAnswers(prev => ({ ...prev, [key]: val }));
+  }
+  return (
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="mb-6"><BrandHeader /></div>
+
+      <div className="mb-8 bs-fade-up">
+        <div className="uppercase-wide text-[11px] text-[var(--bayside-blue)] font-semibold mb-3">
+          Part II · Calling Profile
+        </div>
+        <h2 className="font-display text-3xl sm:text-5xl leading-[0.95] mb-4">
+          BEYOND YOUR <span className="text-[var(--bayside-blue)]">GIFTS.</span>
+        </h2>
+        <p className="text-[var(--ink-soft)] leading-relaxed">
+          Your spiritual gifts are only part of the picture. God also uses your passions, burdens,
+          and life experiences to shape your calling. Answer prayerfully and honestly.
+        </p>
+      </div>
+
+      <div className="space-y-4 mb-8">
+        {CALLING_QUESTIONS.map((q, i) => {
+          const Icon = q.icon;
+          const useCyan = i % 2 === 1;
+          return (
+            <div key={q.key} className="bs-card p-5 sm:p-6 bs-fade-up">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: useCyan ? 'var(--bayside-cyan-soft)' : 'rgba(2,112,222,0.1)' }}
+                >
+                  <Icon className="w-4 h-4" style={{ color: useCyan ? 'var(--bayside-blue-dark)' : 'var(--bayside-blue)' }} />
+                </div>
+                <h3 className="font-display text-2xl uppercase-tight">{q.title}</h3>
+              </div>
+              <p className="text-[var(--ink)] mb-2 leading-relaxed">{q.prompt}</p>
+              {q.hint && <p className="text-xs italic text-[var(--ink-muted)] mb-3">{q.hint}</p>}
+              <textarea
+                value={callingAnswers[q.key]}
+                onChange={(e) => update(q.key, e.target.value)}
+                rows={4}
+                placeholder="Your reflection…"
+                className="bs-textarea w-full rounded-lg px-4 py-3 text-[var(--ink)] resize-y leading-relaxed"
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <button onClick={onBack} className="bs-btn-ghost inline-flex items-center gap-1.5 px-4 py-3 text-sm font-semibold uppercase-tight">
+          <ChevronLeft className="w-4 h-4" /> Inventory
+        </button>
+        <button onClick={onNext} className="bs-btn-primary inline-flex items-center gap-1.5 px-5 sm:px-7 py-3 rounded-lg text-sm">
+          See My Results <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultsScreen({
+  userName, scores, sortedScores, topThree, thirdScore, secondary,
+  callingAnswers, onRestart, onEditInventory, onEditCalling,
+}) {
+  const chartData = sortedScores.map((s, idx) => {
+    const isTop = idx < 3;
+    const isSecondary = !isTop && s.score >= 10;
+    return {
+      name: s.name,
+      score: s.score,
+      tier: isTop ? 'top' : isSecondary ? 'secondary' : 'low',
+    };
+  });
+
+  function downloadResults() {
+    const lines = [];
+    lines.push('BAYSIDE CHAPEL — SPIRITUAL GIFTS & CALLING ASSESSMENT');
+    lines.push('================================================');
+    lines.push('');
+    if (userName) lines.push(`Name: ${userName}`);
+    lines.push(`Date: ${new Date().toLocaleDateString()}`);
+    lines.push('');
+    lines.push('—— TOP THREE GIFTS ——');
+    topThree.forEach((g, i) => {
+      lines.push(`${i + 1}. ${g.name} (${g.score}/20)`);
+      lines.push(`   ${g.desc}`);
+      lines.push(`   Scripture: ${g.scripture}`);
+      lines.push('');
+    });
+    lines.push('—— ALL GIFT SCORES ——');
+    sortedScores.forEach(g => lines.push(`${g.name.padEnd(28)} ${g.score}/20`));
+    lines.push('');
+    lines.push('—— CALLING PROFILE ——');
+    CALLING_QUESTIONS.forEach(q => {
+      lines.push(q.title.toUpperCase());
+      lines.push(callingAnswers[q.key] || '(no response)');
+      lines.push('');
+    });
+    lines.push('');
+    lines.push('Bayside Chapel · baysidechapel.org');
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bayside-gifts-${(userName || 'assessment').replace(/\s+/g, '-').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function emailResults() {
+    const body = encodeURIComponent(
+      `Hi,\n\nHere are my Spiritual Gifts & Calling results from Bayside Chapel.\n\n` +
+      (userName ? `Name: ${userName}\n` : '') +
+      `Date: ${new Date().toLocaleDateString()}\n\n` +
+      `TOP THREE GIFTS:\n${topThree.map((g, i) => `${i + 1}. ${g.name} (${g.score}/20)`).join('\n')}\n\n` +
+      `I'd love to talk about how I can begin using these gifts to serve.\n\n` +
+      `Thanks,\n${userName || ''}`
+    );
+    window.location.href = `mailto:?subject=${encodeURIComponent('My Spiritual Gifts Results')}&body=${body}`;
+  }
+
+  const tierColor = (tier) =>
+    tier === 'top' ? '#0270DE' :
+    tier === 'secondary' ? '#48D8DB' :
+    '#CBD5E1';
+
+  return (
+    <div>
+      {/* Dark hero */}
+      <div className="bs-hero-spotlight text-white px-5 sm:px-8 pt-8 pb-16 sm:pt-10 sm:pb-20">
+        <div className="max-w-4xl mx-auto">
+          <BrandHeader dark />
+        </div>
+        <div className="max-w-4xl mx-auto mt-10 sm:mt-16 bs-fade-up">
+          <div className="uppercase-wide text-[11px] text-[var(--bayside-cyan)] font-semibold mb-4">
+            Part III · Your Results
+          </div>
+          <h1 className="font-display text-5xl sm:text-7xl md:text-8xl leading-[0.92] mb-3">
+            {userName ? `${userName.split(' ')[0].toUpperCase()},` : 'YOUR'}<br/>
+            YOUR <span className="text-[var(--bayside-cyan)]">GIFTS.</span>
+          </h1>
+          <p className="font-serif italic text-lg sm:text-xl text-white/75 max-w-xl mt-4">
+            These results are the start of a conversation — with the Holy Spirit, your church
+            community, and the people God has placed around you.
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        {/* Top Three */}
+        <div className="mb-12 -mt-24 sm:-mt-28 relative">
+          <div className="grid sm:grid-cols-3 gap-4 mb-6">
+            {topThree.map((g, i) => (
+              <TopGiftCard key={g.id} gift={g} rank={i} delay={i * 80} />
+            ))}
+          </div>
+          <p className="text-xs text-[var(--ink-muted)] italic text-center">
+            Scores of 15–20 indicate your strongest gifts. 10–14 suggest secondary gifts worth exploring.
+          </p>
+        </div>
+
+        {/* Chart */}
+        <div className="mb-12 bs-card p-5 sm:p-7">
+          <div className="flex items-end justify-between mb-1 flex-wrap gap-2">
+            <h2 className="font-display text-2xl sm:text-3xl uppercase-tight">
+              YOUR COMPLETE <span className="text-[var(--bayside-blue)]">PROFILE</span>
+            </h2>
+            <div className="text-xs uppercase-wide text-[var(--ink-muted)] font-semibold">
+              18 Gifts · Ranked
+            </div>
+          </div>
+          <p className="text-sm text-[var(--ink-muted)] mb-6">All 18 spiritual gifts, scored 0–20.</p>
+          <div style={{ height: Math.max(420, GIFTS.length * 28) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 5, right: 40, left: 0, bottom: 5 }}
+              >
+                <XAxis
+                  type="number"
+                  domain={[0, 20]}
+                  ticks={[0, 5, 10, 15, 20]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#6B7280' }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={130}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#0A0A0A' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0A0A0A',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontSize: '13px',
+                    color: '#fff',
+                  }}
+                  labelStyle={{ color: '#48D8DB', fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}
+                  itemStyle={{ color: '#fff' }}
+                  formatter={(v) => [`${v} / 20`, 'Score']}
+                  cursor={{ fill: 'rgba(2,112,222,0.08)' }}
+                />
+                <Bar dataKey="score" radius={[0, 6, 6, 0]}>
+                  {chartData.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={tierColor(entry.tier)} />
+                  ))}
+                  <LabelList
+                    dataKey="score"
+                    position="right"
+                    style={{ fontFamily: 'Poppins, sans-serif', fontSize: '13px', fill: '#0A0A0A', fontWeight: 700 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 mt-5 text-xs text-[var(--ink-soft)] justify-center font-medium">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-[var(--bayside-blue)]" /> Top 3 (Primary)
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-[var(--bayside-cyan)]" /> Secondary (10–14)
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded bg-[#CBD5E1]" /> Below 10
+            </span>
+          </div>
+        </div>
+
+        {/* Secondary */}
+        {secondary.length > 0 && (
+          <div className="mb-12">
+            <h2 className="font-display text-2xl sm:text-3xl uppercase-tight mb-1">
+              SECONDARY <span className="text-[var(--bayside-cyan)]">GIFTS</span>
+            </h2>
+            <p className="text-sm text-[var(--ink-muted)] mb-5">Worth exploring — these may emerge as God grows you.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {secondary.map((g) => (
+                <div key={g.id} className="bs-card p-4">
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <h3 className="font-bold uppercase-tight">{g.name}</h3>
+                    <span className="font-display text-xl text-[var(--bayside-blue)] tabular-nums">
+                      {g.score}<span className="text-xs text-[var(--ink-muted)] font-normal">/20</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--ink-soft)] leading-relaxed">{g.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Calling Profile recap */}
+        <div className="mb-12 page-break">
+          <h2 className="font-display text-2xl sm:text-3xl uppercase-tight mb-1">
+            YOUR CALLING <span className="text-[var(--bayside-blue)]">PROFILE</span>
+          </h2>
+          <p className="text-sm text-[var(--ink-muted)] mb-6">
+            Where your gifts and these reflections overlap is often where God is calling you to serve.
+          </p>
+          <div className="space-y-3">
+            {CALLING_QUESTIONS.map((q) => {
+              const answer = callingAnswers[q.key];
+              const Icon = q.icon;
+              return (
+                <div key={q.key} className="bs-card p-5">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <Icon className="w-4 h-4 text-[var(--bayside-blue)]" />
+                    <h3 className="font-bold uppercase-tight">{q.title}</h3>
+                  </div>
+                  <p className="text-[var(--ink)] leading-relaxed whitespace-pre-wrap">
+                    {answer ? answer : <span className="italic text-[var(--ink-muted)]">No response — consider returning to add your reflection.</span>}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Closing dark CTA section */}
+        <div className="bs-card-dark p-8 sm:p-10 mb-10 text-center relative overflow-hidden">
+          <div
+            className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-25"
+            style={{ background: 'radial-gradient(circle, var(--bayside-cyan), transparent 70%)' }}
+          />
+          <div
+            className="absolute -bottom-16 -left-12 w-48 h-48 rounded-full opacity-20"
+            style={{ background: 'radial-gradient(circle, var(--bayside-blue), transparent 70%)' }}
+          />
+          <div className="relative">
+            <div className="uppercase-wide text-[11px] text-[var(--bayside-cyan)] font-semibold mb-3">
+              Your Next Step
+            </div>
+            <h3 className="font-display text-3xl sm:text-5xl leading-[0.95] mb-5">
+              DON’T BURY<br/>WHAT GOD HAS<br/>
+              <span className="text-[var(--bayside-cyan)]">ENTRUSTED</span> TO YOU.
+            </h3>
+            <p className="font-serif italic text-lg sm:text-xl text-white/85 leading-relaxed max-w-xl mx-auto mb-3">
+              “For we are his workmanship, created in Christ Jesus for good works, which God prepared
+              beforehand, that we should walk in them.”
+            </p>
+            <div className="uppercase-wide text-[10px] text-[var(--bayside-cyan)] font-semibold mb-6">
+              — Ephesians 2:10
+            </div>
+            <p className="text-sm text-white/70 max-w-md mx-auto">
+              Talk to a pastor, mentor, or trusted friend about what you’ve discovered. Take one
+              specific step in the next 30 days to begin using your gifts.
+            </p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="no-print">
+          <div className="flex flex-wrap gap-3 justify-center mb-8">
+            <button onClick={() => window.print()} className="bs-btn-primary inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm">
+              <Printer className="w-4 h-4" /> Print / Save PDF
+            </button>
+            <button onClick={downloadResults} className="bs-btn-secondary inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm">
+              <Download className="w-4 h-4" /> Download as Text
+            </button>
+            <button onClick={emailResults} className="bs-btn-secondary inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm">
+              <Mail className="w-4 h-4" /> Email My Pastor
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-center text-sm text-[var(--ink-muted)] font-medium">
+            <button onClick={onEditInventory} className="hover:text-[var(--bayside-blue)] underline-offset-4 hover:underline uppercase-tight text-xs">
+              Edit Inventory
+            </button>
+            <span>·</span>
+            <button onClick={onEditCalling} className="hover:text-[var(--bayside-blue)] underline-offset-4 hover:underline uppercase-tight text-xs">
+              Edit Calling Profile
+            </button>
+            <span>·</span>
+            <button onClick={onRestart} className="hover:text-[var(--bayside-blue)] underline-offset-4 hover:underline uppercase-tight text-xs">
+              Start Over
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-10 pt-8 border-t border-[var(--line)]">
+            <BaysideMark size={20} />
+            <span className="uppercase-wide text-[10px] font-semibold text-[var(--ink-muted)]">
+              baysidechapel.org
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TopGiftCard({ gift, rank, delay }) {
+  const isPrimary = rank === 0;
+  const accent =
+    rank === 0 ? 'var(--bayside-blue)' :
+    rank === 1 ? 'var(--bayside-cyan)' :
+    'var(--bayside-magenta)';
+  const labels = ['Primary', 'Second', 'Third'];
+
+  return (
+    <div
+      className={`relative rounded-[14px] overflow-hidden bs-stamp ${isPrimary ? 'bs-card-dark' : 'bs-card'}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {/* Rank badge */}
+      <div
+        className="absolute top-0 right-0 w-16 h-16 flex items-start justify-end pt-3 pr-3"
+        style={{ background: `linear-gradient(225deg, ${accent} 0%, transparent 60%)`, opacity: isPrimary ? 0.7 : 0.3 }}
+      >
+        <span className={`font-display text-3xl ${isPrimary ? 'text-white' : ''}`} style={!isPrimary ? { color: accent } : {}}>
+          0{rank + 1}
+        </span>
+      </div>
+
+      <div className="p-5 sm:p-6 relative">
+        <div className={`uppercase-wide text-[10px] font-semibold mb-1 ${isPrimary ? 'text-[var(--bayside-cyan)]' : ''}`} style={!isPrimary ? { color: accent } : {}}>
+          {labels[rank]} Gift
+        </div>
+        <h3 className={`font-display text-2xl sm:text-3xl uppercase-tight leading-tight mb-3 ${isPrimary ? 'text-white' : ''}`}>
+          {gift.name}
+        </h3>
+        <div className={`flex items-baseline gap-1 mb-4 ${isPrimary ? 'text-white' : ''}`}>
+          <span className="font-display text-4xl tabular-nums leading-none" style={{ color: isPrimary ? '#fff' : accent }}>
+            {gift.score}
+          </span>
+          <span className={`text-sm ${isPrimary ? 'text-white/60' : 'text-[var(--ink-muted)]'}`}>/20</span>
+        </div>
+        <p className={`text-sm leading-relaxed mb-4 ${isPrimary ? 'text-white/85' : 'text-[var(--ink-soft)]'}`}>
+          {gift.desc}
+        </p>
+        <div className={`pt-3 border-t flex items-start gap-1.5 ${isPrimary ? 'border-white/15' : 'border-[var(--line)]'}`}>
+          <BookOpen className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isPrimary ? 'text-[var(--bayside-cyan)]' : ''}`} style={!isPrimary ? { color: accent } : {}} />
+          <span className={`text-xs italic leading-snug ${isPrimary ? 'text-white/70' : 'text-[var(--ink-muted)]'}`}>
+            {gift.scripture}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mount the app
+const rootEl = document.getElementById('root');
+const root = createRoot(rootEl);
+root.render(<SpiritualGiftsApp />);
+
+// Hide the loading screen once mounted
+const loader = document.getElementById('initial-loader');
+if (loader) {
+  setTimeout(() => {
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 500);
+  }, 100);
+}
+</script>
+</body>
+</html>
