@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bayside Chapel — Assessment Admin</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%230270DE'/%3E%3Cpath d='M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z' fill='none' stroke='%23fff' stroke-width='4.5'/%3E%3Cline x1='22' y1='16' x2='22' y2='48' stroke='%23fff' stroke-width='4.5'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "recharts": "https://esm.sh/recharts@2.13.0?deps=react@18.3.1,react-dom@18.3.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.0"
+  }
+}
+</script>
+<script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
+<style>
+  html, body { background: #F6F8FB; margin: 0; padding: 0; font-family: 'Poppins', system-ui, sans-serif; }
+  #root { min-height: 100vh; }
+  .initial-loader { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #F6F8FB; z-index: 9999; transition: opacity 400ms; }
+  .initial-loader.hidden { opacity: 0; pointer-events: none; }
+  .initial-loader-mark { width: 56px; height: 56px; border-radius: 50%; background: #0270DE; display: flex; align-items: center; justify-content: center; animation: pulse 1.6s ease-in-out infinite; }
+  .initial-loader-mark svg { width: 32px; height: 32px; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .recharts-cartesian-axis-tick text { font-family: 'Poppins', sans-serif !important; font-size: 11px !important; fill: #0A0A0A !important; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="initial-loader" id="initial-loader">
+    <div class="initial-loader-mark">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z" fill="none" stroke="#fff" stroke-width="4.5"/>
+        <line x1="22" y1="16" x2="22" y2="48" stroke="#fff" stroke-width="4.5"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
+} from 'recharts';
+import {
+  ChevronLeft, ChevronRight, BookOpen, LogOut, Lock, Search, Download,
+  Users, Calendar, TrendingUp, Award, Heart, Flame, MapPin, Star, Sparkles,
+  Clock, ArrowRight, AlertCircle, Loader2, Eye, EyeOff, RefreshCw, Mail,
+} from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+/* ===================================================================== */
+/*                          CONFIGURATION                                */
+/* ===================================================================== */
+/* These MUST match the values in index.html. See SETUP.md.             */
+
+const SUPABASE_URL = 'https://kmapvmaorjwixnljemjb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttYXB2bWFvcmp3aXhubGplbWpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNjc3OTEsImV4cCI6MjA5NDk0Mzc5MX0.Yia1amAsz1r6t-ntpJOwEAgYAE2Z4IN-FVSWO6oRgkc';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ===================================================================== */
+/*                                DATA                                   */
+/* ===================================================================== */
+
+const GIFTS = [
+  { id: 'administration', name: 'Administration', desc: 'The God-given ability to organize people, resources, and plans to accomplish ministry goals effectively and efficiently.', scripture: '1 Corinthians 12:28; Acts 6:1–7' },
+  { id: 'apostleship', name: 'Apostleship', desc: 'The God-given ability to launch new ministries, plant churches, or extend the gospel into new territories and cultures.', scripture: '1 Corinthians 12:28; Ephesians 4:11; Romans 1:5' },
+  { id: 'discernment', name: 'Discernment', desc: 'The God-given ability to distinguish between truth and error, to sense the spiritual source behind a message, behavior, or situation.', scripture: '1 Corinthians 12:10; 1 John 4:1; Acts 16:16–18' },
+  { id: 'encouragement', name: 'Encouragement', desc: 'The God-given ability to come alongside others with words of comfort, challenge, and hope that strengthen their faith and move them toward growth.', scripture: 'Romans 12:8; Acts 14:22; Hebrews 10:24–25' },
+  { id: 'evangelism', name: 'Evangelism', desc: 'The God-given ability to clearly and effectively communicate the gospel to unbelievers in a way that draws them to faith in Christ.', scripture: 'Ephesians 4:11; Acts 8:26–40; 2 Timothy 4:5' },
+  { id: 'faith', name: 'Faith', desc: 'The God-given ability to trust God with extraordinary confidence, even in the face of impossible circumstances, and to inspire that trust in others.', scripture: '1 Corinthians 12:9; Hebrews 11:1; Romans 4:18–21' },
+  { id: 'giving', name: 'Giving', desc: 'The God-given ability to contribute material resources to the work of the Lord with generosity, joy, and cheerfulness beyond what is expected.', scripture: 'Romans 12:8; 2 Corinthians 9:6–8; Acts 4:36–37' },
+  { id: 'healing', name: 'Healing', desc: 'The God-given ability to serve as an instrument of God’s healing power — physical, emotional, or spiritual — in the lives of others.', scripture: '1 Corinthians 12:9, 28; Acts 3:1–10; James 5:14–16' },
+  { id: 'helps', name: 'Helps / Service', desc: 'The God-given ability to identify and meet practical needs in the body of Christ, freeing others to focus on their primary calling.', scripture: 'Romans 12:7; 1 Corinthians 12:28; Acts 6:1–4' },
+  { id: 'hospitality', name: 'Hospitality', desc: 'The God-given ability to create warm, welcoming environments where people feel valued, safe, and cared for.', scripture: '1 Peter 4:9–10; Romans 12:13; Hebrews 13:2' },
+  { id: 'intercession', name: 'Intercession', desc: 'The God-given ability to pray for extended periods with intensity and faithfulness, and to see specific and significant answers to prayer.', scripture: 'Romans 8:26–27; Colossians 4:12; 1 Timothy 2:1–4' },
+  { id: 'knowledge', name: 'Knowledge', desc: 'The God-given ability to discover, analyze, and understand biblical truth in a way that edifies the body of Christ.', scripture: '1 Corinthians 12:8; Romans 11:33–34; Colossians 2:2–3' },
+  { id: 'leadership', name: 'Leadership', desc: 'The God-given ability to cast vision, set direction, and motivate others to work together toward a God-honoring purpose.', scripture: 'Romans 12:8; Hebrews 13:17; Acts 15:7–11' },
+  { id: 'mercy', name: 'Mercy', desc: 'The God-given ability to feel genuine empathy and compassion for those who are suffering and to translate that compassion into cheerful, tangible acts of care.', scripture: 'Romans 12:8; Matthew 25:34–40; Luke 10:30–37' },
+  { id: 'pastoring', name: 'Pastoring / Shepherding', desc: 'The God-given ability to assume long-term responsibility for the spiritual health, protection, and growth of a group of believers.', scripture: 'Ephesians 4:11; 1 Peter 5:1–4; John 10:11–14' },
+  { id: 'prophecy', name: 'Prophecy', desc: 'The God-given ability to receive and communicate a message from God that edifies, exhorts, or comforts the body of Christ.', scripture: 'Romans 12:6; 1 Corinthians 12:10, 14:1–5; Acts 2:17' },
+  { id: 'teaching', name: 'Teaching', desc: 'The God-given ability to understand and clearly explain the truths of God’s Word so that others can learn, grow, and apply Scripture to their lives.', scripture: 'Romans 12:7; 1 Corinthians 12:28; Ephesians 4:11; James 3:1' },
+  { id: 'wisdom', name: 'Wisdom', desc: 'The God-given ability to apply biblical truth and spiritual insight to specific situations in a way that produces the best course of action.', scripture: '1 Corinthians 12:8; James 1:5; Acts 6:3, 10' },
+];
+
+const GIFT_BY_ID = Object.fromEntries(GIFTS.map(g => [g.id, g]));
+
+const CALLING_QUESTIONS = [
+  { key: 'passion', title: 'Passion', icon: Heart },
+  { key: 'burden', title: 'Burden', icon: Flame },
+  { key: 'experience', title: 'Experience', icon: MapPin },
+  { key: 'fruit', title: 'Fruit', icon: Star },
+  { key: 'joy', title: 'Joy', icon: Sparkles },
+  { key: 'availability', title: 'Availability', icon: Clock },
+  { key: 'nextStep', title: 'Next Step', icon: ArrowRight },
+];
+
+/* ===================================================================== */
+/*                            ROOT                                       */
+/* ===================================================================== */
+
+function AdminApp() {
+  const [authState, setAuthState] = useState('checking');
+  const [user, setUser] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [selectedSub, setSelectedSub] = useState(null);
+  const isConfigured = !SUPABASE_URL.includes('PASTE') && !SUPABASE_ANON_KEY.includes('PASTE');
+
+  useEffect(() => {
+    if (!isConfigured) { setAuthState('not-configured'); return; }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session) { setUser(data.session.user); setAuthState('authed'); }
+      else setAuthState('login');
+    }).catch(() => setAuthState('login'));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) { setUser(session.user); setAuthState('authed'); }
+      else { setUser(null); setAuthState('login'); }
+    });
+    return () => listener?.subscription?.unsubscribe?.();
+  }, []);
+
+  async function loadSubmissions() {
+    setLoading(true); setLoadError(null);
+    const { data, error } = await supabase
+      .from('assessments')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) setLoadError(error.message);
+    else setSubmissions(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (authState === 'authed') loadSubmissions();
+  }, [authState]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSubmissions([]);
+    setAuthState('login');
+  }
+
+  if (authState === 'checking') return <CenteredLoader text="Loading…" />;
+  if (authState === 'not-configured') return <NotConfiguredScreen />;
+  if (authState === 'login') return <LoginScreen />;
+
+  if (selectedSub) {
+    return <DetailScreen submission={selectedSub} onBack={() => setSelectedSub(null)} />;
+  }
+
+  return (
+    <DashboardScreen
+      submissions={submissions}
+      loading={loading}
+      loadError={loadError}
+      user={user}
+      onSelect={setSelectedSub}
+      onLogout={handleLogout}
+      onReload={loadSubmissions}
+    />
+  );
+}
+
+/* ===================================================================== */
+/*                         BRAND ELEMENTS                                */
+/* ===================================================================== */
+
+function BaysideMark({ size = 32, fill = '#0270DE' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="32" fill={fill} />
+      <path d="M22 16 H36 a8 8 0 0 1 0 16 H22 Z M22 32 H38 a8 8 0 0 1 0 16 H22 Z" fill="none" stroke="#fff" strokeWidth="4.5" />
+      <line x1="22" y1="16" x2="22" y2="48" stroke="#fff" strokeWidth="4.5" />
+    </svg>
+  );
+}
+
+function BrandHeader({ dark = false }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <BaysideMark size={32} fill={dark ? '#FFFFFF' : '#0270DE'} />
+      <div className={`uppercase tracking-[0.18em] text-[11px] font-semibold ${dark ? 'text-white/90' : 'text-[#0A0A0A]'}`}>
+        Bayside<span className="font-normal opacity-70">chapel</span>
+        <span className="ml-2 text-[#48D8DB] font-semibold">/ Admin</span>
+      </div>
+    </div>
+  );
+}
+
+function CenteredLoader({ text }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <Loader2 className="w-8 h-8 text-[#0270DE] animate-spin" />
+      <div className="text-xs uppercase tracking-[0.2em] text-[#6B7280] font-semibold">{text}</div>
+    </div>
+  );
+}
+
+/* ===================================================================== */
+/*                        NOT CONFIGURED                                 */
+/* ===================================================================== */
+
+function NotConfiguredScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-5 py-12">
+      <div className="max-w-lg w-full bg-white rounded-2xl p-8 shadow-lg border-l-[4px] border-[#F1592A]">
+        <BrandHeader />
+        <div className="mt-8">
+          <div className="uppercase tracking-[0.18em] text-[11px] text-[#F1592A] font-semibold mb-3">
+            Setup Required
+          </div>
+          <h2 className="text-3xl font-black tracking-tight text-[#0A0A0A] mb-4 leading-tight">
+            Add your Supabase keys to admin.html
+          </h2>
+          <p className="text-[#3A3A3A] leading-relaxed mb-4">
+            This dashboard isn’t connected to a database yet. Open <code className="bg-[#F6F8FB] px-1.5 py-0.5 rounded text-sm font-mono">admin.html</code> and replace the
+            <code className="bg-[#F6F8FB] px-1.5 py-0.5 rounded text-sm font-mono mx-1">PASTE_YOUR_SUPABASE_URL_HERE</code>
+            and
+            <code className="bg-[#F6F8FB] px-1.5 py-0.5 rounded text-sm font-mono mx-1">PASTE_YOUR_SUPABASE_ANON_KEY_HERE</code>
+            placeholders near the top of the file.
+          </p>
+          <p className="text-sm text-[#6B7280]">See SETUP.md for the step-by-step.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================== */
+/*                             LOGIN                                     */
+/* ===================================================================== */
+
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleSubmit(e) {
+    e?.preventDefault?.();
+    setLoading(true); setError(null);
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) { setError(authError.message); setLoading(false); }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="px-5 sm:px-8 pt-6 pb-12 bg-[#0A0A0A]" style={{ backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(72,216,219,0.18) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(2,112,222,0.20) 0%, transparent 50%)' }}>
+        <div className="max-w-lg mx-auto"><BrandHeader dark /></div>
+      </div>
+
+      <div className="flex-1 flex items-start justify-center px-5 sm:px-8 -mt-8">
+        <div className="max-w-md w-full bg-white rounded-2xl p-7 sm:p-9 shadow-xl">
+          <div className="mb-6">
+            <div className="w-12 h-12 rounded-full bg-[#0270DE]/10 flex items-center justify-center mb-4">
+              <Lock className="w-5 h-5 text-[#0270DE]" />
+            </div>
+            <h1 className="font-black text-3xl tracking-tight text-[#0A0A0A] uppercase leading-[0.95] mb-2">
+              Staff Login
+            </h1>
+            <p className="text-sm text-[#6B7280]">
+              Restricted access. Sign in with the shared Bayside staff credentials.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <label className="block mb-4">
+              <span className="uppercase tracking-[0.15em] text-[10px] font-semibold text-[#6B7280] block mb-2">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="staff@baysidechapel.org"
+                className="w-full px-4 py-3 border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#0270DE] focus:ring-4 focus:ring-[#0270DE]/12"
+                autoComplete="email"
+                inputMode="email"
+                required
+              />
+            </label>
+
+            <label className="block mb-5">
+              <span className="uppercase tracking-[0.15em] text-[10px] font-semibold text-[#6B7280] block mb-2">Password</span>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 pr-12 border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#0270DE] focus:ring-4 focus:ring-[#0270DE]/12"
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#0A0A0A]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </label>
+
+            {error && (
+              <div className="mb-4 px-4 py-3 bg-[#F1592A]/8 border border-[#F1592A]/20 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-[#F1592A] shrink-0 mt-0.5" />
+                <span className="text-sm text-[#0A0A0A]">{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !email || !password}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#0270DE] text-white font-bold uppercase tracking-[0.05em] text-sm rounded-lg hover:bg-[#0058B0] transition disabled:opacity-50"
+            >
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : <>Sign In <ChevronRight className="w-4 h-4" /></>}
+            </button>
+          </form>
+
+          <p className="text-xs text-[#6B7280] mt-6 leading-relaxed">
+            Forgot the password? Ask Ken or another staff member. Accounts are managed through
+            Supabase — contact your admin to create or reset credentials.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================== */
+/*                          DASHBOARD                                    */
+/* ===================================================================== */
+
+function DashboardScreen({ submissions, loading, loadError, user, onSelect, onLogout, onReload }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+
+  const stats = useMemo(() => {
+    const total = submissions.length;
+    const now = Date.now();
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const thisWeek = submissions.filter(s => new Date(s.created_at).getTime() > weekAgo).length;
+    const thisMonth = submissions.filter(s => new Date(s.created_at).getTime() > monthAgo).length;
+
+    const giftTotals = {};
+    GIFTS.forEach(g => giftTotals[g.id] = 0);
+    submissions.forEach(s => {
+      const scores = s.scores || {};
+      Object.entries(scores).forEach(([id, score]) => {
+        if (giftTotals[id] !== undefined) giftTotals[id] += Number(score) || 0;
+      });
+    });
+    const avgScores = GIFTS.map(g => ({
+      name: g.name,
+      avgScore: total > 0 ? Math.round((giftTotals[g.id] / total) * 10) / 10 : 0,
+    })).sort((a, b) => b.avgScore - a.avgScore);
+
+    return { total, thisWeek, thisMonth, avgScores };
+  }, [submissions]);
+
+  const filteredSubmissions = useMemo(() => {
+    let list = [...submissions];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.email || '').toLowerCase().includes(q)
+      );
+    }
+    if (sortBy === 'newest') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    else if (sortBy === 'oldest') list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    else if (sortBy === 'name') list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return list;
+  }, [submissions, searchQuery, sortBy]);
+
+  function exportCSV() {
+    const rows = [['Date', 'Name', 'Email', 'Top 1', 'Top 1 Score', 'Top 2', 'Top 2 Score', 'Top 3', 'Top 3 Score', 'All Scores']];
+    submissions.forEach(s => {
+      const t = s.top_three || [];
+      const allScores = Object.entries(s.scores || {})
+        .map(([id, score]) => `${(GIFT_BY_ID[id] || {}).name || id}:${score}`)
+        .join('; ');
+      rows.push([
+        new Date(s.created_at).toLocaleString(),
+        s.name || '',
+        s.email || '',
+        t[0]?.name || '', t[0]?.score ?? '',
+        t[1]?.name || '', t[1]?.score ?? '',
+        t[2]?.name || '', t[2]?.score ?? '',
+        allScores,
+      ]);
+    });
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bayside-assessments-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="min-h-screen">
+      <div className="bg-[#0A0A0A] text-white px-5 sm:px-8 py-5" style={{ backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(72,216,219,0.10) 0%, transparent 60%)' }}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+          <BrandHeader dark />
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/60 hidden sm:inline truncate max-w-[180px]">{user?.email}</span>
+            <button
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs uppercase tracking-[0.05em] font-semibold text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-md transition"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+          <StatCard label="Total Submissions" value={stats.total} icon={Users} color="#0270DE" />
+          <StatCard label="Past 7 Days" value={stats.thisWeek} icon={Calendar} color="#48D8DB" />
+          <StatCard label="Past 30 Days" value={stats.thisMonth} icon={TrendingUp} color="#BA3175" />
+        </div>
+
+        {submissions.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 sm:p-7 mb-8 shadow-sm">
+            <div className="flex items-end justify-between flex-wrap gap-2 mb-1">
+              <h2 className="font-black text-2xl tracking-tight uppercase">
+                BAYSIDE’S <span className="text-[#0270DE]">PROFILE</span>
+              </h2>
+              <div className="text-xs uppercase tracking-[0.18em] text-[#6B7280] font-semibold">
+                Avg Score · {stats.total} people
+              </div>
+            </div>
+            <p className="text-sm text-[#6B7280] mb-5">Average score per gift across all submissions. Higher = more common in your congregation.</p>
+            <div style={{ height: Math.max(420, GIFTS.length * 26) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.avgScores} layout="vertical" margin={{ top: 5, right: 40, left: 0, bottom: 5 }}>
+                  <XAxis type="number" domain={[0, 20]} ticks={[0, 5, 10, 15, 20]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
+                  <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#0A0A0A' }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0A0A0A', border: 'none', borderRadius: '8px', fontSize: '13px', color: '#fff' }}
+                    labelStyle={{ color: '#48D8DB', fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={(v) => [`${v} avg`, 'Score']}
+                    cursor={{ fill: 'rgba(2,112,222,0.08)' }}
+                  />
+                  <Bar dataKey="avgScore" radius={[0, 6, 6, 0]}>
+                    {stats.avgScores.map((entry, idx) => (
+                      <Cell key={idx} fill={idx < 3 ? '#0270DE' : idx < 8 ? '#48D8DB' : '#CBD5E1'} />
+                    ))}
+                    <LabelList dataKey="avgScore" position="right" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '12px', fill: '#0A0A0A', fontWeight: 700 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h2 className="font-black text-2xl tracking-tight uppercase">Submissions</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onReload}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs uppercase tracking-[0.05em] font-semibold text-[#0A0A0A] border border-[#E5E7EB] hover:border-[#0A0A0A] rounded-md"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button
+              onClick={exportCSV}
+              disabled={submissions.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs uppercase tracking-[0.05em] font-semibold text-white bg-[#0270DE] hover:bg-[#0058B0] rounded-md disabled:opacity-40"
+            >
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by name or email…"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#0270DE] focus:ring-4 focus:ring-[#0270DE]/12 text-sm"
+            />
+          </div>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#0270DE] focus:ring-4 focus:ring-[#0270DE]/12 text-sm font-medium"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="name">Name (A–Z)</option>
+          </select>
+        </div>
+
+        {loadError && (
+          <div className="mb-5 px-4 py-3 bg-[#F1592A]/10 border border-[#F1592A]/30 rounded-lg flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-[#F1592A] shrink-0 mt-0.5" />
+            <span className="text-sm">{loadError}</span>
+          </div>
+        )}
+
+        {loading && submissions.length === 0 && <CenteredLoader text="Loading submissions…" />}
+
+        {!loading && filteredSubmissions.length === 0 && submissions.length === 0 && (
+          <div className="bg-white rounded-2xl p-12 text-center">
+            <div className="w-14 h-14 rounded-full bg-[#0270DE]/10 flex items-center justify-center mx-auto mb-4">
+              <Users className="w-6 h-6 text-[#0270DE]" />
+            </div>
+            <h3 className="font-bold text-lg mb-2">No submissions yet</h3>
+            <p className="text-sm text-[#6B7280]">Once people complete the assessment, their results will appear here.</p>
+          </div>
+        )}
+
+        {!loading && filteredSubmissions.length === 0 && submissions.length > 0 && (
+          <div className="bg-white rounded-2xl p-10 text-center">
+            <p className="text-sm text-[#6B7280]">No submissions match “{searchQuery}”.</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {filteredSubmissions.map(sub => (
+            <SubmissionRow key={sub.id} sub={sub} onClick={() => onSelect(sub)} />
+          ))}
+        </div>
+
+        <p className="text-xs text-[#6B7280] text-center mt-10">
+          Showing {filteredSubmissions.length} of {submissions.length} submissions ·
+          <span className="ml-1">Bayside Chapel · baysidechapel.org</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
+      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-15" style={{ background: `radial-gradient(circle, ${color}, transparent 60%)` }} />
+      <Icon className="w-4 h-4 mb-2" style={{ color }} />
+      <div className="font-black text-3xl sm:text-4xl tabular-nums leading-none mb-1" style={{ color }}>{value}</div>
+      <div className="text-[10px] sm:text-xs uppercase tracking-[0.12em] font-semibold text-[#6B7280] leading-tight">{label}</div>
+    </div>
+  );
+}
+
+function SubmissionRow({ sub, onClick }) {
+  const top = (sub.top_three || [])[0];
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-xl p-4 hover:shadow-md hover:bg-[#0270DE]/[0.02] transition border-l-[3px] border-transparent hover:border-[#0270DE]"
+    >
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-[#0A0A0A] truncate">{sub.name || '—'}</div>
+          <div className="text-xs text-[#6B7280] truncate flex items-center gap-1.5">
+            <Mail className="w-3 h-3 shrink-0" /> {sub.email || '—'}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          {top && (
+            <div className="inline-flex items-center gap-1.5 mb-1">
+              <Award className="w-3.5 h-3.5 text-[#0270DE]" />
+              <span className="font-bold text-sm">{top.name}</span>
+              <span className="text-xs text-[#6B7280] tabular-nums">({top.score}/20)</span>
+            </div>
+          )}
+          <div className="text-xs text-[#6B7280] tabular-nums">
+            {new Date(sub.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-[#6B7280] shrink-0" />
+      </div>
+    </button>
+  );
+}
+
+/* ===================================================================== */
+/*                          DETAIL VIEW                                  */
+/* ===================================================================== */
+
+function DetailScreen({ submission, onBack }) {
+  const sub = submission;
+  const scoresMap = sub.scores || {};
+  const allScores = GIFTS.map(g => ({ ...g, score: Number(scoresMap[g.id]) || 0 }));
+  const sortedScores = [...allScores].sort((a, b) => b.score - a.score);
+  const topThree = sortedScores.slice(0, 3);
+
+  const chartData = sortedScores.map((s, idx) => ({
+    name: s.name,
+    score: s.score,
+    tier: idx < 3 ? 'top' : s.score >= 10 ? 'secondary' : 'low',
+  }));
+  const tierColor = (t) => t === 'top' ? '#0270DE' : t === 'secondary' ? '#48D8DB' : '#CBD5E1';
+
+  const callingAnswers = sub.calling_answers || {};
+
+  return (
+    <div className="min-h-screen">
+      <div className="bg-[#0A0A0A] text-white px-5 sm:px-8 py-5 sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.05em] font-semibold text-white/80 hover:text-white"
+          >
+            <ChevronLeft className="w-4 h-4" /> All Submissions
+          </button>
+          <div className="text-xs text-white/60 truncate">
+            {new Date(sub.created_at).toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <div className="mb-8">
+          <div className="uppercase tracking-[0.18em] text-[11px] text-[#0270DE] font-semibold mb-3">Member</div>
+          <h1 className="font-black text-4xl sm:text-5xl tracking-tight uppercase leading-[0.95] mb-2">
+            {sub.name}
+          </h1>
+          <a href={`mailto:${sub.email}`} className="inline-flex items-center gap-1.5 text-[#0270DE] hover:underline text-sm">
+            <Mail className="w-4 h-4" /> {sub.email}
+          </a>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-3 mb-10">
+          {topThree.map((g, i) => (
+            <div key={g.id} className={`rounded-xl p-5 ${i === 0 ? 'bg-[#0A0A0A] text-white' : 'bg-white'} shadow-sm relative overflow-hidden`}>
+              <div className={`text-[10px] uppercase tracking-[0.18em] font-semibold mb-1 ${i === 0 ? 'text-[#48D8DB]' : i === 1 ? 'text-[#48D8DB]' : 'text-[#BA3175]'}`}>
+                {i === 0 ? 'Primary' : i === 1 ? 'Second' : 'Third'}
+              </div>
+              <div className="font-black text-xl tracking-tight uppercase leading-tight mb-2">{g.name}</div>
+              <div className="font-black text-3xl tabular-nums leading-none mb-3" style={{ color: i === 0 ? '#fff' : i === 1 ? '#48D8DB' : '#BA3175' }}>
+                {g.score}<span className={`text-xs font-normal ${i === 0 ? 'text-white/60' : 'text-[#6B7280]'}`}>/20</span>
+              </div>
+              <p className={`text-xs leading-relaxed ${i === 0 ? 'text-white/80' : 'text-[#3A3A3A]'}`}>
+                {g.desc}
+              </p>
+              <div className={`pt-2 mt-3 border-t flex items-start gap-1.5 ${i === 0 ? 'border-white/15' : 'border-[#E5E7EB]'}`}>
+                <BookOpen className={`w-3 h-3 mt-0.5 shrink-0 ${i === 0 ? 'text-[#48D8DB]' : ''}`} style={i !== 0 ? { color: i === 1 ? '#48D8DB' : '#BA3175' } : {}} />
+                <span className={`text-[10px] italic ${i === 0 ? 'text-white/70' : 'text-[#6B7280]'}`}>{g.scripture}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 sm:p-6 mb-10 shadow-sm">
+          <h2 className="font-black text-xl uppercase tracking-tight mb-1">Complete Profile</h2>
+          <p className="text-xs text-[#6B7280] mb-5">All 18 gifts, ranked.</p>
+          <div style={{ height: Math.max(420, GIFTS.length * 26) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 40, left: 0, bottom: 5 }}>
+                <XAxis type="number" domain={[0, 20]} ticks={[0, 5, 10, 15, 20]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
+                <YAxis type="category" dataKey="name" width={130} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#0A0A0A' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#0A0A0A', border: 'none', borderRadius: '8px', fontSize: '13px', color: '#fff' }} labelStyle={{ color: '#48D8DB', fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }} itemStyle={{ color: '#fff' }} formatter={(v) => [`${v}/20`, 'Score']} cursor={{ fill: 'rgba(2,112,222,0.08)' }} />
+                <Bar dataKey="score" radius={[0, 6, 6, 0]}>
+                  {chartData.map((entry, idx) => <Cell key={idx} fill={tierColor(entry.tier)} />)}
+                  <LabelList dataKey="score" position="right" style={{ fontFamily: 'Poppins, sans-serif', fontSize: '12px', fill: '#0A0A0A', fontWeight: 700 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <h2 className="font-black text-xl uppercase tracking-tight mb-1">Calling Profile</h2>
+        <p className="text-xs text-[#6B7280] mb-5">In their own words.</p>
+        <div className="space-y-3">
+          {CALLING_QUESTIONS.map(q => {
+            const Icon = q.icon;
+            const answer = callingAnswers[q.key];
+            return (
+              <div key={q.key} className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="w-4 h-4 text-[#0270DE]" />
+                  <h3 className="font-bold uppercase tracking-[0.05em] text-sm">{q.title}</h3>
+                </div>
+                <p className="text-[#0A0A0A] leading-relaxed whitespace-pre-wrap">
+                  {answer ? answer : <span className="italic text-[#6B7280]">No response.</span>}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 mt-10">
+          <a
+            href={`mailto:${sub.email}?subject=${encodeURIComponent('Your Spiritual Gifts Assessment')}&body=${encodeURIComponent(`Hi ${(sub.name || '').split(' ')[0]},\n\nI saw your assessment results and would love to talk about how you can use your gifts in `+(topThree[0]?.name || '')+`.\n\n— Bayside Chapel`)}`}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-[#0270DE] text-white font-bold uppercase tracking-[0.05em] text-sm rounded-lg hover:bg-[#0058B0]"
+          >
+            <Mail className="w-4 h-4" /> Email {(sub.name || '').split(' ')[0] || 'them'}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================== */
+/*                              MOUNT                                    */
+/* ===================================================================== */
+
+const rootEl = document.getElementById('root');
+const root = createRoot(rootEl);
+root.render(<AdminApp />);
+
+const loader = document.getElementById('initial-loader');
+if (loader) {
+  setTimeout(() => {
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 500);
+  }, 100);
+}
+</script>
+</body>
+</html>
