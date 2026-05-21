@@ -14,7 +14,9 @@
     "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
     "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
     "recharts": "https://esm.sh/recharts@2.13.0?deps=react@18.3.1,react-dom@18.3.1",
-    "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1"
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.46.0",
+    "@emailjs/browser": "https://esm.sh/@emailjs/browser@4.4.1"
   }
 }
 </script>
@@ -22,7 +24,6 @@
 <style>
   html, body { background: #F6F8FB; margin: 0; padding: 0; }
   #root { min-height: 100vh; }
-  /* Initial loader, hidden once React mounts */
   .initial-loader {
     position: fixed; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -70,8 +71,29 @@ import {
 import {
   ChevronRight, ChevronLeft, Award, BookOpen, Printer, RotateCcw, Check,
   Sparkles, Heart, Flame, MapPin, Clock, ArrowRight, Star, Download, Mail,
-  AlertCircle, Loader2,
+  AlertCircle, Loader2, Lock, Send, ShieldCheck,
 } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+import emailjs from '@emailjs/browser';
+
+/* ===================================================================== */
+/*                          CONFIGURATION                                */
+/* ===================================================================== */
+/* Replace these placeholders with your actual values. See SETUP.md.    */
+
+const SUPABASE_URL = 'https://kmapvmaorjwixnljemjb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttYXB2bWFvcmp3aXhubGplbWpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNjc3OTEsImV4cCI6MjA5NDk0Mzc5MX0.Yia1amAsz1r6t-ntpJOwEAgYAE2Z4IN-FVSWO6oRgkc';
+const EMAILJS_PUBLIC_KEY = 'oZlq0yOOZY1_QBENg';
+const EMAILJS_SERVICE_ID = 'service_gjb832c';
+const EMAILJS_TEMPLATE_PASTOR = 'template_wdufess';
+const EMAILJS_TEMPLATE_USER = 'template_p94f3ks';
+const PASTOR_EMAIL = 'ken@baysidechapel.org';
+const PRIVACY_NOTICE = 'Your name, email, and results will be shared with Bayside Chapel pastoral staff for follow-up and to support your discipleship.';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (typeof window !== 'undefined' && EMAILJS_PUBLIC_KEY && !EMAILJS_PUBLIC_KEY.includes('PASTE')) {
+  try { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); } catch (e) {}
+}
 
 /* ===================================================================== */
 /*                                DATA                                   */
@@ -271,9 +293,12 @@ function BaysideMark({ size = 32, className = '', fill = '#0270DE' }) {
 function SpiritualGiftsApp() {
   const [step, setStep] = useState('welcome');
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [inventoryPage, setInventoryPage] = useState(0);
   const [answers, setAnswers] = useState(Array(QUESTIONS.length).fill(null));
   const [callingAnswers, setCallingAnswers] = useState(EMPTY_CALLING);
+  const [submitState, setSubmitState] = useState('idle'); // idle | submitting | submitted | error
+  const [submitError, setSubmitError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [hasSavedData, setHasSavedData] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
@@ -304,7 +329,7 @@ function SpiritualGiftsApp() {
         if (typeof window === 'undefined') return;
         setSaveState('saving');
         window.localStorage.setItem('bayside-sga-progress', JSON.stringify({
-          step, userName, inventoryPage, answers, callingAnswers,
+          step, userName, userEmail, inventoryPage, answers, callingAnswers, submitState,
           savedAt: new Date().toISOString(),
         }));
         setSaveState('saved');
@@ -312,7 +337,7 @@ function SpiritualGiftsApp() {
       } catch (e) { setSaveState('idle'); }
     }, 500);
     return () => clearTimeout(id);
-  }, [step, userName, inventoryPage, answers, callingAnswers, loaded]);
+  }, [step, userName, userEmail, inventoryPage, answers, callingAnswers, submitState, loaded]);
 
   // --- Computed scores
   const scores = useMemo(() => GIFTS.map((g, i) => {
@@ -347,9 +372,11 @@ function SpiritualGiftsApp() {
         const data = JSON.parse(raw);
         setStep(data.step || 'inventory');
         setUserName(data.userName || '');
+        setUserEmail(data.userEmail || '');
         setInventoryPage(data.inventoryPage || 0);
         setAnswers(data.answers || Array(QUESTIONS.length).fill(null));
         setCallingAnswers({ ...EMPTY_CALLING, ...(data.callingAnswers || {}) });
+        setSubmitState(data.submitState || 'idle');
       }
     } catch (e) { setStep('name'); }
     setTimeout(scrollTop, 50);
@@ -358,9 +385,12 @@ function SpiritualGiftsApp() {
   function handleStartFresh() {
     try { window.localStorage.removeItem('bayside-sga-progress'); } catch (e) {}
     setUserName('');
+    setUserEmail('');
     setInventoryPage(0);
     setAnswers(Array(QUESTIONS.length).fill(null));
     setCallingAnswers(EMPTY_CALLING);
+    setSubmitState('idle');
+    setSubmitError(null);
     setHasSavedData(false);
     setStep('name');
     setTimeout(scrollTop, 50);
@@ -372,6 +402,82 @@ function SpiritualGiftsApp() {
       next[idx] = val;
       return next;
     });
+  }
+
+  async function submitAssessment() {
+    setSubmitState('submitting');
+    setSubmitError(null);
+    const isConfigured = !SUPABASE_URL.includes('PASTE') && !SUPABASE_ANON_KEY.includes('PASTE');
+
+    try {
+      // Compute payload
+      const scoresMap = {};
+      scores.forEach(s => { scoresMap[s.id] = s.score; });
+      const topThreeData = topThree.map(g => ({ id: g.id, name: g.name, score: g.score }));
+
+      if (!isConfigured) {
+        // Demo mode - skip network calls, mark as submitted
+        await new Promise(r => setTimeout(r, 800));
+        setSubmitState('submitted');
+        setStep('results');
+        setTimeout(scrollTop, 50);
+        return;
+      }
+
+      // 1. Insert into Supabase
+      const { error: dbError } = await supabase.from('assessments').insert({
+        name: userName,
+        email: userEmail,
+        scores: scoresMap,
+        top_three: topThreeData,
+        calling_answers: callingAnswers,
+      });
+      if (dbError) throw new Error(`Database: ${dbError.message}`);
+
+      // 2. Send emails (best-effort, do not block results)
+      const topThreeText = topThreeData.map((g, i) => `${i + 1}. ${g.name} (${g.score}/20)`).join('\n');
+      const callingText = CALLING_QUESTIONS.map(q => `${q.title.toUpperCase()}\n${callingAnswers[q.key] || '(no response)'}`).join('\n\n');
+      const emailConfigured = !EMAILJS_SERVICE_ID.includes('PASTE') && !EMAILJS_PUBLIC_KEY.includes('PASTE');
+
+      if (emailConfigured) {
+        const pastorPayload = {
+          to_email: PASTOR_EMAIL,
+          member_name: userName,
+          member_email: userEmail,
+          top_three: topThreeText,
+          calling_profile: callingText,
+          date: new Date().toLocaleString(),
+        };
+        const userPayload = {
+          to_email: userEmail,
+          to_name: userName.split(' ')[0] || userName,
+          top_three: topThreeText,
+        };
+        if (!EMAILJS_TEMPLATE_PASTOR.includes('PASTE')) {
+          try { await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_PASTOR, pastorPayload); }
+          catch (e) { console.error('Pastor email failed:', e); }
+        }
+        if (!EMAILJS_TEMPLATE_USER.includes('PASTE')) {
+          try { await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_USER, userPayload); }
+          catch (e) { console.error('User email failed:', e); }
+        }
+      }
+
+      setSubmitState('submitted');
+      setStep('results');
+      setTimeout(scrollTop, 50);
+    } catch (e) {
+      console.error('Submission error:', e);
+      setSubmitError(e.message || 'Submission failed');
+      setSubmitState('error');
+    }
+  }
+
+  function skipSubmissionAndViewResults() {
+    setSubmitState('idle');
+    setSubmitError(null);
+    setStep('results');
+    setTimeout(scrollTop, 50);
   }
 
   function nextPage() {
@@ -597,9 +703,11 @@ function SpiritualGiftsApp() {
         )}
 
         {step === 'name' && (
-          <NameScreen
+          <InfoScreen
             userName={userName}
             setUserName={setUserName}
+            userEmail={userEmail}
+            setUserEmail={setUserEmail}
             onBack={() => { setStep('welcome'); setTimeout(scrollTop, 50); }}
             onNext={() => { setStep('inventory'); setTimeout(scrollTop, 50); }}
           />
@@ -625,20 +733,25 @@ function SpiritualGiftsApp() {
           <CallingScreen
             callingAnswers={callingAnswers}
             setCallingAnswers={setCallingAnswers}
+            submitState={submitState}
+            submitError={submitError}
             onBack={() => { setStep('inventory'); setInventoryPage(TOTAL_PAGES - 1); setTimeout(scrollTop, 50); }}
-            onNext={() => { setStep('results'); setTimeout(scrollTop, 50); }}
+            onSubmit={submitAssessment}
+            onSkip={skipSubmissionAndViewResults}
           />
         )}
 
         {step === 'results' && (
           <ResultsScreen
             userName={userName}
+            userEmail={userEmail}
             scores={scores}
             sortedScores={sortedScores}
             topThree={topThree}
             thirdScore={thirdScore}
             secondary={secondary}
             callingAnswers={callingAnswers}
+            submitState={submitState}
             onRestart={handleStartFresh}
             onEditInventory={() => { setStep('inventory'); setInventoryPage(0); setTimeout(scrollTop, 50); }}
             onEditCalling={() => { setStep('calling'); setTimeout(scrollTop, 50); }}
@@ -738,9 +851,13 @@ function WelcomeScreen({ hasSavedData, savedAt, loaded, onResume, onStartFresh }
           )}
 
           <div className="mt-12 pt-8 border-t border-[var(--line)]">
-            <p className="text-sm text-[var(--ink-muted)] italic max-w-xl">
+            <p className="text-sm text-[var(--ink-muted)] italic max-w-xl mb-4">
               Pray before you begin. Answer honestly — not based on what you wish were true, but on
               what is actually true of your life right now. <span className="font-semibold text-[var(--ink-soft)] not-italic">Every gift matters.</span>
+            </p>
+            <p className="text-xs text-[var(--ink-muted)] flex items-start gap-2 max-w-xl">
+              <ShieldCheck className="w-4 h-4 text-[var(--bayside-blue)] shrink-0 mt-0.5" />
+              <span>{PRIVACY_NOTICE}</span>
             </p>
           </div>
         </div>
@@ -760,7 +877,12 @@ function StepCard({ num, title, desc, accent }) {
   );
 }
 
-function NameScreen({ userName, setUserName, onBack, onNext }) {
+function InfoScreen({ userName, setUserName, userEmail, setUserEmail, onBack, onNext }) {
+  const [touched, setTouched] = useState({ name: false, email: false });
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail);
+  const nameValid = userName.trim().length >= 2;
+  const canContinue = nameValid && emailValid;
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="px-5 sm:px-8 pt-6">
@@ -775,22 +897,68 @@ function NameScreen({ userName, setUserName, onBack, onNext }) {
             Before we begin
           </div>
           <h2 className="font-display text-4xl sm:text-6xl leading-[0.95] mb-4">
-            WHAT’S YOUR<br/>NAME?
+            LET’S START WITH<br/>YOUR <span className="text-[var(--bayside-blue)]">INFO.</span>
           </h2>
           <p className="text-[var(--ink-soft)] mb-8 leading-relaxed">
-            We’ll use it to personalize your results. Optional — feel free to skip.
+            We’ll send you a copy of your results and share them with Pastor Ken so he can
+            follow up with you.
           </p>
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Your name"
-            className="bs-input w-full px-5 py-4 rounded-lg text-lg mb-5"
-            autoFocus
-          />
+
+          <label className="block mb-4">
+            <span className="uppercase-wide text-[10px] font-semibold text-[var(--ink-muted)] block mb-2">
+              Your Name
+            </span>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              onBlur={() => setTouched(t => ({ ...t, name: true }))}
+              placeholder="First and last name"
+              className="bs-input w-full px-5 py-4 rounded-lg text-lg"
+              autoFocus
+              autoComplete="name"
+            />
+            {touched.name && !nameValid && (
+              <span className="text-xs text-[var(--bayside-orange)] mt-1.5 block font-medium">
+                Please enter your name.
+              </span>
+            )}
+          </label>
+
+          <label className="block mb-6">
+            <span className="uppercase-wide text-[10px] font-semibold text-[var(--ink-muted)] block mb-2">
+              Email Address
+            </span>
+            <input
+              type="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              onBlur={() => setTouched(t => ({ ...t, email: true }))}
+              placeholder="you@example.com"
+              className="bs-input w-full px-5 py-4 rounded-lg text-lg"
+              autoComplete="email"
+              inputMode="email"
+            />
+            {touched.email && !emailValid && userEmail.length > 0 && (
+              <span className="text-xs text-[var(--bayside-orange)] mt-1.5 block font-medium">
+                Please enter a valid email address.
+              </span>
+            )}
+          </label>
+
+          <div className="bs-card p-4 mb-6 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-[var(--bayside-blue)] shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--ink-soft)] leading-relaxed">
+              <span className="font-semibold text-[var(--ink)]">Privacy:</span> {PRIVACY_NOTICE}
+            </p>
+          </div>
+
           <button
             onClick={onNext}
-            className="bs-btn-primary w-full inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg text-sm"
+            disabled={!canContinue}
+            className={`w-full inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg text-sm transition-opacity ${
+              canContinue ? 'bs-btn-primary' : 'bs-btn-primary opacity-40 cursor-not-allowed'
+            }`}
           >
             Begin Part I — Inventory <ChevronRight className="w-4 h-4" />
           </button>
@@ -941,10 +1109,12 @@ function InventoryScreen({
   );
 }
 
-function CallingScreen({ callingAnswers, setCallingAnswers, onBack, onNext }) {
+function CallingScreen({ callingAnswers, setCallingAnswers, submitState, submitError, onBack, onSubmit, onSkip }) {
   function update(key, val) {
     setCallingAnswers(prev => ({ ...prev, [key]: val }));
   }
+  const submitting = submitState === 'submitting';
+  const errored = submitState === 'error';
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
       <div className="mb-6"><BrandHeader /></div>
@@ -991,12 +1161,48 @@ function CallingScreen({ callingAnswers, setCallingAnswers, onBack, onNext }) {
         })}
       </div>
 
+      {errored && (
+        <div className="mb-5 bs-card p-5 border-l-[4px] border-[var(--bayside-orange)] bs-fade-up">
+          <div className="flex items-start gap-3 mb-3">
+            <AlertCircle className="w-5 h-5 text-[var(--bayside-orange)] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold mb-1">We couldn’t save your results.</p>
+              <p className="text-sm text-[var(--ink-soft)]">
+                {submitError || 'There was a problem connecting to the server.'} Check your internet
+                connection and try again. If the issue continues, you can view your results without
+                submitting.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onSubmit} className="bs-btn-primary text-xs px-4 py-2 rounded-md">Try Again</button>
+            <button onClick={onSkip} className="bs-btn-secondary text-xs px-4 py-2 rounded-md">View Results Without Saving</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3">
-        <button onClick={onBack} className="bs-btn-ghost inline-flex items-center gap-1.5 px-4 py-3 text-sm font-semibold uppercase-tight">
+        <button
+          onClick={onBack}
+          disabled={submitting}
+          className="bs-btn-ghost inline-flex items-center gap-1.5 px-4 py-3 text-sm font-semibold uppercase-tight disabled:opacity-40"
+        >
           <ChevronLeft className="w-4 h-4" /> Inventory
         </button>
-        <button onClick={onNext} className="bs-btn-primary inline-flex items-center gap-1.5 px-5 sm:px-7 py-3 rounded-lg text-sm">
-          See My Results <ChevronRight className="w-4 h-4" />
+        <button
+          onClick={onSubmit}
+          disabled={submitting}
+          className="bs-btn-primary inline-flex items-center gap-1.5 px-5 sm:px-7 py-3 rounded-lg text-sm disabled:opacity-70"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Submitting…
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" /> Submit & See My Results
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -1004,9 +1210,10 @@ function CallingScreen({ callingAnswers, setCallingAnswers, onBack, onNext }) {
 }
 
 function ResultsScreen({
-  userName, scores, sortedScores, topThree, thirdScore, secondary,
-  callingAnswers, onRestart, onEditInventory, onEditCalling,
+  userName, userEmail, scores, sortedScores, topThree, thirdScore, secondary,
+  callingAnswers, submitState, onRestart, onEditInventory, onEditCalling,
 }) {
+  const wasSubmitted = submitState === 'submitted';
   const chartData = sortedScores.map((s, idx) => {
     const isTop = idx < 3;
     const isSecondary = !isTop && s.score >= 10;
@@ -1094,8 +1301,25 @@ function ResultsScreen({
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        {wasSubmitted && (
+          <div className="mb-8 -mt-24 sm:-mt-28 relative bs-card p-5 sm:p-6 border-l-[4px] border-[var(--bayside-blue)] bs-fade-up no-print">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[var(--bayside-cyan-soft)] flex items-center justify-center shrink-0">
+                <Check className="w-5 h-5 text-[var(--bayside-blue-dark)]" />
+              </div>
+              <div>
+                <p className="font-bold uppercase-tight text-sm mb-1">Results saved</p>
+                <p className="text-sm text-[var(--ink-soft)] leading-relaxed">
+                  We’ve shared your results with Pastor Ken{userEmail ? ` and sent a copy to ${userEmail}` : ''}.
+                  He’ll be in touch about how to take a next step with your gifts.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top Three */}
-        <div className="mb-12 -mt-24 sm:-mt-28 relative">
+        <div className={`mb-12 ${wasSubmitted ? '' : '-mt-24 sm:-mt-28'} relative`}>
           <div className="grid sm:grid-cols-3 gap-4 mb-6">
             {topThree.map((g, i) => (
               <TopGiftCard key={g.id} gift={g} rank={i} delay={i * 80} />
@@ -1352,12 +1576,10 @@ function TopGiftCard({ gift, rank, delay }) {
   );
 }
 
-// Mount the app
 const rootEl = document.getElementById('root');
 const root = createRoot(rootEl);
 root.render(<SpiritualGiftsApp />);
 
-// Hide the loading screen once mounted
 const loader = document.getElementById('initial-loader');
 if (loader) {
   setTimeout(() => {
