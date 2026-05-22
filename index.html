@@ -87,7 +87,7 @@ const EMAILJS_PUBLIC_KEY = 'oZlq0yOOZY1_QBENg';
 const EMAILJS_SERVICE_ID = 'service_gjb832c';
 const EMAILJS_TEMPLATE_PASTOR = 'template_wdufess';
 const EMAILJS_TEMPLATE_USER = 'template_p94f3ks';
-const PASTOR_EMAIL = 'ken@baysidechapel.org';
+const PASTOR_EMAIL = 'ken@baysidechapel.org,andrew@baysidechapel.org';
 const PRIVACY_NOTICE = 'Your name, email, and results will be shared with Bayside Chapel pastoral staff for follow-up and to support your discipleship.';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -900,8 +900,7 @@ function InfoScreen({ userName, setUserName, userEmail, setUserEmail, onBack, on
             LET’S START WITH<br/>YOUR <span className="text-[var(--bayside-blue)]">INFO.</span>
           </h2>
           <p className="text-[var(--ink-soft)] mb-8 leading-relaxed">
-            We’ll send you a copy of your results and share them with Pastor Ken so he can
-            follow up with you.
+            We'll send you a copy of your results and share them with the Bayside pastoral team.
           </p>
 
           <label className="block mb-4">
@@ -1310,8 +1309,8 @@ function ResultsScreen({
               <div>
                 <p className="font-bold uppercase-tight text-sm mb-1">Results saved</p>
                 <p className="text-sm text-[var(--ink-soft)] leading-relaxed">
-                  We’ve shared your results with Pastor Ken{userEmail ? ` and sent a copy to ${userEmail}` : ''}.
-                  He’ll be in touch about how to take a next step with your gifts.
+                  We've shared your results with the Bayside pastoral team{userEmail ? ` and sent a copy to ${userEmail}` : ''}.
+                  Take some time to prayerfully consider how God might be inviting you to use these gifts.
                 </p>
               </div>
             </div>
